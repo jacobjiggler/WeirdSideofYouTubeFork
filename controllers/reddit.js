@@ -3,7 +3,6 @@
 
 var api = require('./api');
 var request = require('request');
-var schedule = require('node-schedule');
 
 exports.crawlRedditUrl = function(reddit_url)
 {
@@ -50,5 +49,5 @@ exports.crawlReddit = function() {
   console.log('Finished crawling r/InterdimensionalCable monthly');
 };
 
-// Run daily
-schedule.scheduleJob('0 0 * * *', exports.crawlReddit);
+// Automatic scheduling intentionally disabled.
+// Trigger manually via the admin panel ("Crawl /r/DeepIntoYoutube" button).
