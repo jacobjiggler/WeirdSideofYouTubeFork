@@ -4,7 +4,8 @@
   "description": "A site to view weird YouTube videos",
   "main": "app.js",
   "scripts": {
-    "start": "webpack && node app.js "
+    "start": "webpack && node app.js ",
+    "test": "node_modules/.bin/mocha test/**/*.test.js --timeout 5000"
   },
   "repository": {
     "type": "git",
@@ -37,6 +38,7 @@
   "private": true,
   "devDependencies": {
     "eslint": "^3.16.1",
+    "mocha": "^10.8.2",
     "webpack": "^2.2.1"
   }
 }

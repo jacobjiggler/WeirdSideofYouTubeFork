@@ -108,61 +108,45 @@ exports.removeVideo = function (video_url_or_id)
   }
 };
 
-// internal function for getting a random youtube ID
-exports.randomVideoID = function (user, callback)
+// Returns a random video doc that isn't in seenVideoIDs.
+// If all videos have been seen, resets seenVideoIDs to [] and retries once so
+// the session can loop the catalog forever without hitting a dead end.
+exports.randomVideoID = function (seenVideoIDs, callback)
 {
-  Counter.findById('videos', function (err, count)
+  Video.aggregate([
+    { $match: { videoID: { $nin: seenVideoIDs } } },
+    { $sample: { size: 1 } }
+  ], function (err, docs)
   {
-    // DB is empty — no videos yet
-    if (err) return callback(err, null);
-    if (!count || count.seq < 1) return callback(null, null);
-
-    var rand = chance.integer({ min: 1, max: count.seq });
-    if(user)
+    if (err) return callback(err);
+    if (!docs.length)
     {
-      var currentVideoHistory = VideoHistory.find({ username: user.username }, { '_id': 0, 'videoID': 1 }).sort({ time: -1 }).limit(Math.min(50, count.seq / 2));
-      var loopExitCounter = 0;
-      while (loopExitCounter < 5)
-      {
-        rand = chance.integer({ min: 1, max: count.seq });
-        var vid_id;
-        Video.findById(rand, function (err, myDocument)
-        {
-          if (myDocument) vid_id = myDocument.videoID;
-        });
-        if (currentVideoHistory.findOne(vid_id) != -1)
-        {
-          break;
-        }
-        loopExitCounter++;
-      }
+      if (seenVideoIDs.length === 0) return callback(null, null); // DB truly empty
+      return exports.randomVideoID([], callback);                  // exhausted → reset & retry
     }
-
-    Video.findByIdAndUpdate(rand, { $inc: { views: 1 } }, function (err, myDocument)
-    {
-      if (err) return callback(err, null);
-      if (!myDocument) return callback(null, null);
-
-      if (user)
-      {
-        VideoHistory.create({ 'username': user.username, 'videoID': myDocument.videoID }, function (err, vid)
-        {
-          if (err) console.log(err);
-        });
-      }
-      callback(null, myDocument.videoID);
-    });
+    var doc = docs[0];
+    Video.findByIdAndUpdate(doc._id, { $inc: { views: 1 } }, function () {});
+    callback(null, doc);
   });
 };
 
 // Handler for a GET request for a random video
 exports.getRandomVid = function (req, res)
 {
-  exports.randomVideoID(req.user, function (err, vidID)
+  if (!req.session.seenVideos) req.session.seenVideos = [];
+  exports.randomVideoID(req.session.seenVideos, function (err, doc)
   {
     if (err) return res.status(500).json({ error: err.message });
-    if (!vidID) return res.status(503).json({ error: 'No videos in database yet' });
-    res.json({ 'vidID': vidID });
+    if (!doc) return res.status(503).json({ error: 'No videos in database yet' });
+    req.session.seenVideos.push(doc.videoID);
+    if (req.user)
+    {
+      VideoHistory.create({ 'username': req.user.username, 'videoID': doc.videoID }, function (err)
+      {
+        if (err) console.log(err);
+      });
+    }
+    res.json({ 'vidID': doc.videoID });
   });
 };
 
