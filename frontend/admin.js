@@ -5,12 +5,17 @@ var currentVideoID = 1;
 var numVideos = 0;
 var videosPerPage = 50;
 
+// CSRF token rendered into the admin page; required on every state-changing POST.
+function getCsrfToken() {
+  var meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.getAttribute('content') : '';
+}
+
 function loadNewTable() {
   var endRange = (currentVideoID+videosPerPage <= numVideos) ? currentVideoID+videosPerPage : numVideos;
   var rangeTxt = 'Showing videos ' + currentVideoID + ' through ' + endRange + ' of ' + numVideos;
   document.getElementById('vidRange').innerText = rangeTxt;
 
-  // Remove old rows when reloading
   var vidTable = document.getElementById('videoTable');
   var rows = vidTable.querySelectorAll('tr');
   for(var i = 0; i < rows.length; ++i) {
@@ -25,7 +30,6 @@ function loadNewTable() {
   }).then(function(vids) {
     for(var key in vids) {
       var val = vids[key];
-
       var dom = generateNewEntry(val);
       document.getElementById('videoTable').appendChild(dom);
     }
@@ -35,7 +39,6 @@ function loadNewTable() {
 }
 
 function generateNewEntry(video) {
-  // Create table row
   var tr = document.createElement('tr');
   tr.setAttribute('id', 'vid' + escape(video.videoID));
   tr.setAttribute('class', 'videoRow');
@@ -43,8 +46,9 @@ function generateNewEntry(video) {
   var td = document.createElement('td');
   tr.appendChild(td);
 
-  // Create removal form
   var form = document.createElement('form');
+  form.setAttribute('action', '/admin/remove');
+  form.setAttribute('method', 'POST');
   td.appendChild(form);
 
   var vidIdInput = document.createElement('input');
@@ -53,12 +57,17 @@ function generateNewEntry(video) {
   vidIdInput.setAttribute('value', escape(video.videoID));
   form.appendChild(vidIdInput);
 
+  var csrfInput = document.createElement('input');
+  csrfInput.setAttribute('type', 'hidden');
+  csrfInput.setAttribute('name', '_csrf');
+  csrfInput.setAttribute('value', getCsrfToken());
+  form.appendChild(csrfInput);
+
   var submit = document.createElement('input');
   submit.setAttribute('type', 'submit');
   submit.setAttribute('value', 'Delete Video');
   form.appendChild(submit);
 
-  // Create link to YouTube video
   var linkTd = document.createElement('td');
   tr.appendChild(linkTd);
 
@@ -67,14 +76,12 @@ function generateNewEntry(video) {
   youtubeLink.innerText = escape(video.videoID);
   linkTd.appendChild(youtubeLink);
 
-  // Insert other metadata
   tr.insertAdjacentHTML('beforeEnd', '<td class = "data-cell"><img src="//i.ytimg.com/vi/' + encodeURIComponent(video.videoID) + '/default.jpg" /></td>');
   tr.insertAdjacentHTML('beforeEnd', '<td class = "data-cell" id="title"></td>');
   tr.insertAdjacentHTML('beforeEnd', '<td class = "data-cell">' + escape(video.views) + '</td>');
   tr.insertAdjacentHTML('beforeEnd', '<td class = "data-cell">' + escape(video.skips/video.views * 100) + '%</td>');
   tr.insertAdjacentHTML('beforeEnd', '<td class = "data-cell">' + escape(video.errorCount/video.views * 100) + '%</td>');
 
-  // Retrieve title from server
   fetch('/api/getVidInfo/' + encodeURIComponent(video.videoID)).then(function(response) {
     return response.json();
   }).then(function(data) {
@@ -99,10 +106,8 @@ ready(function() {
   });
 
   var nxtPage = function() {
-    console.log(currentVideoID);
     currentVideoID += videosPerPage;
     if(currentVideoID > numVideos) currentVideoID -= videosPerPage;
-    console.log(currentVideoID);
     loadNewTable();
   };
   document.getElementById('nextButtonTop').onclick = nxtPage;

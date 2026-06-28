@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
+	<meta name="csrf-token" content="<%= csrfToken %>">
 	<link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/pure-min.css" integrity="sha384-UQiGfs9ICog+LwheBSRCt1o5cbyKIHbwjWscjemyBMT9YCUMZffs6UqUTd0hObXD" crossorigin="anonymous">
  	<link rel="stylesheet" type="text/css" href="/css/newstyle.css">
 	<script type='text/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js'></script>
 </head>
-<!-- <link rel="stylesheet" type="text/css" href="./style.css"> -->
 <body>
 
 	<div class="custom-menu-wrapper">
@@ -27,7 +27,6 @@
 	      <% } %>
 	      <%if (!user) { %>
 	        <li class="pure-menu-item"><a href="/login" class="pure-menu-link">Login</a></li>
-	        <li class="pure-menu-item"><a href="/register" class="pure-menu-link">Register</a></li>
 	      <% } %>
 	    </ul>
 	  </div>
@@ -43,6 +42,7 @@
 
 <form action="/admin/submit" method="post" class="pure-form">
 	<span>
+	<input type="hidden" name="_csrf" value="<%= csrfToken %>">
 	<label>Video ID:</label>
 	<input type="text" name="videoID"/>
 	<input type="submit" value="Submit" class="pure-button"/>
@@ -51,6 +51,7 @@
 
 <form action="/admin/remove" method="post" class="pure-form">
 	<span>
+	<input type="hidden" name="_csrf" value="<%= csrfToken %>">
 	<label>Video ID:</label>
 	<input type="text" name="videoID"/>
 	<input type="submit" value="Remove" class="pure-button"/>
@@ -70,7 +71,6 @@
 <table id="videoTable" cellspacing="5" class="table">
 	<tr id="tableheader">
 	   <td class = "header-cell">Controls</td>
-	   <!-- The stats button should expand and show full statistics for a video.  We can hide some of the stats that show by default, or add more -->
 	   <td class = "header-cell"> ID</td>
 	   <td class = "header-cell">Thumbnail</td>
 	   <td class = "header-cell">Title</td>

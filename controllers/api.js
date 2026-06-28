@@ -11,9 +11,8 @@ var request = require('request');
 var BannedVideo = require('../models/bannedvideo');
 
 // internal function for adding a video to the database
-// vid is a string representing the youtube video ID
 exports.addVideo = function (video_url_or_id, callback)
-{    //Don't re-add a banned video
+{
   var video_split = video_url_or_id.match(/(?:https?:\/{2})?(?:w{3}\.)?youtu(?:be)?\.(?:com|be)(?:\/watch\?v=|\/)([^\s&\?]+)/);
   var vidID = video_url_or_id;
   if(video_url_or_id != null && video_split != null)
@@ -24,7 +23,6 @@ exports.addVideo = function (video_url_or_id, callback)
   {
     if (!vid)
     {
-      // Don't add duplicates to the database
       Video.findOne({ 'videoID': vidID }, function (error, vid)
       {
         if (!vid)
@@ -32,7 +30,7 @@ exports.addVideo = function (video_url_or_id, callback)
           Counter.findByIdAndUpdate('videos', { $inc: { seq: 1 } }, { new: true, upsert: true, setDefaultsOnInsert: true }, function (error, counter)
           {
             if (error)
-              return next(error);
+              return callback(error);
             Video.create({ 'videoID': vidID, '_id': counter.seq }, function (err, vid)
             {
               if (err)
@@ -54,11 +52,8 @@ exports.addVideo = function (video_url_or_id, callback)
   });
 };
 
-//This removes the video but does not parse first, useful for removing weird IDs that might break the regex.
 exports.removeVideoNoParse = function (vidID)
 {
-
-  // Don't add duplicates to the database
   BannedVideo.findOne({ 'videoID': vidID }, function (error, vid)
   {
     if (!vid)
@@ -66,7 +61,7 @@ exports.removeVideoNoParse = function (vidID)
       Counter.findByIdAndUpdate('bannedvideos', { $inc: { seq: 1 } }, { new: true, upsert: true, setDefaultsOnInsert: true }, function (error, counter)
       {
         if (error)
-          return next(error);
+          return console.error(error);
         BannedVideo.create({ 'videoID': vidID, '_id': counter.seq }, function (err, vid)
         {
           if (err)
@@ -78,11 +73,14 @@ exports.removeVideoNoParse = function (vidID)
 
   Video.findOne({ 'videoID': vidID }, function (error, video)
   {
+    if (!video) return;
     var __id = video._id;
     Counter.findById('videos', function (error, counter)
     {
+      if (!counter) return;
       Video.findOne({ '_id': counter.seq }, function (error, _video)
       {
+        if (!_video) return;
         video.remove();
         Video.create({ 'videoID': _video.videoID, '_id': __id }, function (err, vid)
         {
@@ -93,7 +91,7 @@ exports.removeVideoNoParse = function (vidID)
       });
     });
   });
-}
+};
 
 // internal function for removing a video by youtube ID
 exports.removeVideo = function (video_url_or_id)
@@ -110,88 +108,80 @@ exports.removeVideo = function (video_url_or_id)
   }
 };
 
-// internal function for getting a random youtube ID.
-// tries to avoid repeating videos in the recent user history by reselecting up to 5 times
-// the callback function expects an error as the first argument, and the video ID as the second
+// internal function for getting a random youtube ID
 exports.randomVideoID = function (user, callback)
 {
   Counter.findById('videos', function (err, count)
   {
-    var rand = chance.integer({ min: 1, max: (count.seq - 1) });
+    // DB is empty — no videos yet
+    if (err) return callback(err, null);
+    if (!count || count.seq < 1) return callback(null, null);
+
+    var rand = chance.integer({ min: 1, max: count.seq });
     if(user)
     {
-      var currentVideoHistory = VideoHistory.find({ username: user.username }, { '_id': 0, 'videoID': 1, 'x': 1 }).sort({ time: -1 }).limit(Math.min(50, count.seq / 2));
+      var currentVideoHistory = VideoHistory.find({ username: user.username }, { '_id': 0, 'videoID': 1 }).sort({ time: -1 }).limit(Math.min(50, count.seq / 2));
       var loopExitCounter = 0;
       while (loopExitCounter < 5)
       {
-        rand = chance.integer({ min: 1, max: (count.seq - 1) });
-
-        //Get the index's video ID and check that against the history.
+        rand = chance.integer({ min: 1, max: count.seq });
         var vid_id;
         Video.findById(rand, function (err, myDocument)
         {
-          vid_id = myDocument.videoID;
+          if (myDocument) vid_id = myDocument.videoID;
         });
         if (currentVideoHistory.findOne(vid_id) != -1)
         {
           break;
         }
-        loopExitCounter++;  //Worst case is 5, then just pick a truly random video.
+        loopExitCounter++;
       }
     }
 
     Video.findByIdAndUpdate(rand, { $inc: { views: 1 } }, function (err, myDocument)
     {
+      if (err) return callback(err, null);
+      if (!myDocument) return callback(null, null);
+
       if (user)
       {
         VideoHistory.create({ 'username': user.username, 'videoID': myDocument.videoID }, function (err, vid)
         {
-          if (err)
-            console.log(err);
+          if (err) console.log(err);
         });
       }
-      if (err)
-        callback(err, null);
-      else
-        callback(err, myDocument.videoID);
+      callback(null, myDocument.videoID);
     });
   });
 };
 
-// Handler for a GET request for a random video.
-// sends the client a JSON object with the youtube video ID
+// Handler for a GET request for a random video
 exports.getRandomVid = function (req, res)
 {
   exports.randomVideoID(req.user, function (err, vidID)
   {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!vidID) return res.status(503).json({ error: 'No videos in database yet' });
     res.json({ 'vidID': vidID });
   });
 };
 
 // handler for a GET request for a range of videos
-// sends a JSON object containing the range of youtube video IDs
 exports.getVidRange = function (req, res)
 {
   var start_id = parseInt(req.params.start);
   var end_id = parseInt(req.params.end);
   Counter.findById('videos', function (error, counter)
   {
-    var smallestID = 1;
-    var largestID = counter.seq;
+    if (!counter) return res.json([]);
 
-    if (start_id < smallestID)
-    {
-      start_id = smallestID;
-    }
-    if (end_id < start_id)
-    {
-      end_id = start_id;
-    }
+    var smallestID = 1;
+
+    if (start_id < smallestID) start_id = smallestID;
+    if (end_id < start_id) end_id = start_id;
+
     var len = end_id - start_id + 1;
-    if (len > 50)
-    {
-      len = 50;
-    }
+    if (len > 50) len = 50;
 
     Video.find({ _id: { $gte: start_id } }, { 'videoID': 1 }).limit(len).lean().exec(function (err, docs)
     {
@@ -200,9 +190,7 @@ exports.getVidRange = function (req, res)
   });
 };
 
-
 // handler for a GET request for a user's video history
-// sends a JSON object containing the last 50 videos watched
 exports.getVideoHistory = function (req, res)
 {
   if (req.user)
@@ -223,25 +211,26 @@ exports.getNumVids = function (req, res)
 {
   Counter.findById('videos', function (err, count)
   {
-    res.json({ 'numVids': count.seq });
+    res.json({ 'numVids': count ? count.seq : 0 });
   });
 };
 
-// handler for a GET request for the number of videos in the database
+// handler for a GET request for the number of banned videos
 exports.getNumBannedVids = function (req, res)
 {
   Counter.findById('bannedvideos', function (err, count)
   {
-    res.json({ 'numBannedVids': count.seq });
+    res.json({ 'numBannedVids': count ? count.seq : 0 });
   });
 };
 
-// handler for a request for video information
-// Will return the same data that the youtube API would return about a video
+// handler for a request for video information from the YouTube API
 exports.getVideoInfo = function (req, res)
 {
-  // XXX TODO set this key in the 'config' directory
-  var youtubeAPIKey = "AIzaSyBf-B5_3Iz5a8Ij52BioFPOE4xJLqC9Sy8";
+  var youtubeAPIKey = process.env.YOUTUBE_API_KEY;
+  if (!youtubeAPIKey) {
+    return res.status(500).json({ error: 'YOUTUBE_API_KEY environment variable is not set' });
+  }
   request('https://www.googleapis.com/youtube/v3/videos?part=snippet&id=' + req.params.videoID + '&key=' + youtubeAPIKey, function (error, response, body)
   {
     if (!error && response.statusCode == 200)

@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /login
+Disallow: /history
+
+Sitemap: https://weirdtube.wtf/sitemap.xml

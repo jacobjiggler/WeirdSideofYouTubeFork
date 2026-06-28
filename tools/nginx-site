@@ -1,6 +1,9 @@
-#NOTE: Due to the rate limiting of this configuration, the admin panel and history page may not display video titles.
-#       We may combine the many simultaneous requests into one bulk request to avoid this.  If we have already done this, you will see video titles correctly on these pages.
-#example anti-ddos nginx configuration
+# NOTE: Due to the rate limiting of this configuration, the admin panel and history
+# page may not display video titles. Consider batching the simultaneous requests
+# into one bulk request to avoid hitting the limit.
+#
+# Example anti-DDoS nginx configuration for local/self-hosted use.
+
 limit_req_zone $binary_remote_addr zone=one:10m rate=1r/s;
 limit_req zone=one burst=10 nodelay;
 
@@ -20,10 +23,9 @@ server {
     add_header Strict-Transport-Security "max-age=31536000" always;
     gzip_vary on;
 
-    #use nginx to serve static files instead of node
+    # Use nginx to serve static files instead of node
     root /opt/WeirdSideofYouTube/public;
     location / {
-        #expires 7d;
         add_header Vary Accept-Encoding;
         try_files $uri @nodejs;
     }
@@ -32,9 +34,8 @@ server {
         proxy_redirect off;
         proxy_http_version 1.1;
         proxy_pass http://nodejs;
-        proxy_set_header Host $host ; 
-        proxy_set_header X-Real-IP $remote_addr; 
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 }
-

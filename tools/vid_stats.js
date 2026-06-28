@@ -1,20 +1,36 @@
 #!/bin/env node
-var readline = require('readline');
+
+// NOTE: vid_stats.js in the original repo had syntax errors and used raw db.*
+// calls that don't work with Mongoose. This is a corrected version.
+
 var mongoose = require('mongoose');
-var vids = require('../models/video');
-var count = require('../models/counter');
+var Video = require('../models/video.js');
+var Counter = require('../models/counters.js');
 
 var database = require('../config/db');
 mongoose.connect(database.url);
 
-var total = db.count.find(seq);
-var vidviews = db.vids.aggregate($sum: views);
-var viderrors = db.vids.aggregate($sum: errorCount);
-var vidskips = db.vids.aggregate($sum: skips);
+Counter.findById('videos', function(err, count) {
+  if (err) return console.error(err);
+  console.log('Total videos:', count ? count.seq : 0);
 
-console.log("Total Vids", total;);
-console.log("Total Vid views", vidviews);
-console.log("Total Vid errors", viderrors);
-console.log("Total skips", vidskips);
-
-
+  Video.aggregate([
+    {
+      $group: {
+        _id: null,
+        totalViews:  { $sum: '$views' },
+        totalErrors: { $sum: '$errorCount' },
+        totalSkips:  { $sum: '$skips' }
+      }
+    }
+  ], function(err, result) {
+    if (err) return console.error(err);
+    if (result.length) {
+      console.log('Total views:', result[0].totalViews);
+      console.log('Total errors:', result[0].totalErrors);
+      console.log('Total skips:', result[0].totalSkips);
+    }
+    mongoose.connection.close();
+    process.exit(0);
+  });
+});

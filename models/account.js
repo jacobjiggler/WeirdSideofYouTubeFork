@@ -1,5 +1,3 @@
-// sample model
-
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 var passportLocalMongoose = require('passport-local-mongoose');
@@ -12,7 +10,5 @@ var Account = new Schema({
 });
 
 Account.plugin(passportLocalMongoose, {usernameLowerCase: true});
-
-// XXX TODO create an index on the username?
 
 module.exports = mongoose.model('Account', Account);

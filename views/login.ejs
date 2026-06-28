@@ -4,14 +4,13 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- Bootstrap core CSS -->
     <link href="./css/bootstrap.min.css" rel="stylesheet">
-    <!-- Custom styles for this template -->
     <link href="./css/signin.css" rel="stylesheet">
   </head>
   <body>
     <div class="container">
       <form class="form-signin" action="/login" method="post">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <h2 class="form-signin-heading">Please sign in</h2>
         <label for="username" class="sr-only">Username</label>
         <input id="username" class="form-control" placeholder="username" name="username" required="" autofocus="" type="text">
@@ -24,5 +23,5 @@
         </div>
         <button class="btn btn-lg btn-primary btn-block" type="submit" value="Submit">Sign in</button>
       </form>
-    </div> <!-- /container -->
+    </div>
 </body></html>

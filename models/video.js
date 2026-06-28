@@ -12,7 +12,6 @@ var Video = new Schema({
   cache: [{type: Schema.Types.ObjectId, ref: 'VideoCache'}]
 });
 
-// Improve performance and ensure no duplicates
 Video.index({_id: 1}, {unique: true});
 Video.index({videoID: 1}, {unique: true});
 

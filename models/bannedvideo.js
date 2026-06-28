@@ -6,7 +6,6 @@ var BannedVideo = new Schema({
   videoID: String,
 });
 
-// Improve performance and ensure no duplicates
 BannedVideo.index({ _id: 1 }, { unique: true });
 BannedVideo.index({ videoID: 1 }, { unique: true });
 

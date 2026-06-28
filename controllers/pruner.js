@@ -13,12 +13,17 @@ var api = require('../controllers/api.js');
 
 var schedule = require('node-schedule');
 
-
 mongoose.connect(database.url);
 
-//Removes any videos that are either in the banned video list, or bans them if they're inaccessable.
+// Removes any videos that are either in the banned video list, or bans them if they're inaccessible.
 exports.pruneVideoDatabase = function()
 {
+  var youtubeAPIKey = process.env.YOUTUBE_API_KEY;
+  if (!youtubeAPIKey) {
+    console.error('YOUTUBE_API_KEY environment variable is not set — skipping prune');
+    return;
+  }
+
   var pruneCount = 0;
   console.info('Beginning pruner, please be patient...');
   Video.find({}, function(err, docs)
@@ -27,21 +32,17 @@ exports.pruneVideoDatabase = function()
     docs.forEach(function(doc)
     {
       doc_count++;
-      // XXX TODO set this key in the 'config' directory
-      var youtubeAPIKey = 'AIzaSyBf-B5_3Iz5a8Ij52BioFPOE4xJLqC9Sy8';
       var videoID = doc.videoID;
       var requestID = ('https://www.googleapis.com/youtube/v3/videos?part=snippet&id=' + videoID + '&key=' + youtubeAPIKey);
-      //Short delay so we don't overuse the API
+      // Short delay so we don't overuse the API
       setTimeout(request, 250 * doc_count, requestID, videoID, function (error, response, body)
       {
         if (!error && response.statusCode == 200)
         {
           var reqJSON = JSON.parse(body);
           console.log('Checking ' + videoID + ' ' + requestID + ':');
-          //console.log(JSON.stringify(reqJSON));
           if(reqJSON.pageInfo.totalResults == 0)
           {
-            //Video is not viewable, remove from database
             api.removeVideoNoParse(videoID, function(err, _vid) {
               if(err != null) {
                 console.error('There was a problem pruning the video');
@@ -59,5 +60,5 @@ exports.pruneVideoDatabase = function()
 
 exports.pruneVideoDatabase();
 
-// Run this function Hourly
+// Run daily
 schedule.scheduleJob('0 0 * * *', exports.pruneVideoDatabase);

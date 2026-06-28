@@ -1,28 +1,27 @@
 var YouTubePlayer = require('youtube-player');
 
-var player = YouTubePlayer('youtube-player', {
-  autoPlay: true,
-  preferredQuality: 'default',
-  allowFullScreen: 'true',
-  videoId: window.initVid
-});
+var player = null;
 
-player.on('ready', function(_event) {
-  player.playVideo();
-});
+function initPlayer() {
+  player = YouTubePlayer('youtube-player', {
+    autoPlay: true,
+    preferredQuality: 'default',
+    allowFullScreen: 'true',
+  });
 
-player.on('stateChange', function(event) {
-  // If video ended
-  if(event.data === 0) {
+  player.on('stateChange', function(event) {
+    if (event.data === 0) {
+      playNextVid();
+    }
+  });
+
+  player.on('error', function(_event) {
     playNextVid();
-  }
-});
-
-player.on('error', function(_event) {
-  playNextVid();
-});
+  });
+}
 
 function playNextVid() {
+  if (!player) initPlayer();
   fetch('./api/getrandomvid').then(function(response) {
     return response.json();
   }).then(function(vid) {
@@ -33,4 +32,9 @@ function playNextVid() {
   });
 }
 
-document.getElementById('playerbutton').onclick = playNextVid;
+window.playNextVid = playNextVid;
+
+document.addEventListener('DOMContentLoaded', function() {
+  var btn = document.getElementById('playerbutton');
+  if (btn) btn.onclick = playNextVid;
+});

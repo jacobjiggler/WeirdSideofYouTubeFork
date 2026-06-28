@@ -14,7 +14,6 @@ var rl = readline.createInterface({
 
 rl.question('Admin username: ', function(username) {
   rl.question('Password: ', function(password) {
-    // Create database entry
     Account.register(new Account({ username : username, admin: true }), password, function(err, _account) {
       if (err) {
         console.error('Could not create user in database!');
@@ -22,11 +21,8 @@ rl.question('Admin username: ', function(username) {
         console.info('User created successfully!');
       }
 
-      // Close stdin
       rl.close();
       process.stdin.destroy();
-
-      // Exit without error
       process.exit(0);
     });
   });

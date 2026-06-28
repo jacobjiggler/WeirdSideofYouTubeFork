@@ -14,7 +14,6 @@ var rl = readline.createInterface({
 
 // Read a video ID from stdin
 rl.question('Enter a video ID to remove: ', function(answer) {
-  // Remove it to the db
   api.removeVideo(answer, function(err, _vid) {
     if(err != null) {
       console.error('There was a problem removing the video');
@@ -22,11 +21,8 @@ rl.question('Enter a video ID to remove: ', function(answer) {
       console.info('Video removed successfully!');
     }
 
-    // Close stdin
     rl.close();
     process.stdin.destroy();
-
-    // Exit without error
     process.exit(0);
   });
 });

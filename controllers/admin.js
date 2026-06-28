@@ -12,14 +12,13 @@ exports.needsAdmin = function(req, res, next) {
     return next();
   }
   else{
-    //res.send(401, 'Unauthorized');
     res.redirect('/login');
   }
 };
 
 // render the admin panel index
 exports.getIndex = function(req, res) {
-  res.render('admin/index', { user : req.user });
+  res.render('admin/index', { user : req.user, csrfToken: req.csrfToken() });
 };
 
 // handles the POST request for submitting a video
@@ -39,9 +38,6 @@ exports.postRemoveVid = function(req, res) {
 };
 
 // Privileged version of /api/getVidRange
-// Handles a GET request for a range of videos
-// Sends a JSON object containing the range of youtube video IDs
-// The response JSON object contains more data than /api/getVidRange
 exports.getVidRangeAdmin = function(req, res) {
   var start_id = parseInt(req.params.start);
   var end_id = parseInt(req.params.end);

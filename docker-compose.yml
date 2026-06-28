@@ -1,0 +1,28 @@
+services:
+  app:
+    build: .
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://mongo:27017/weirdtube
+      - SESSION_SECRET=${SESSION_SECRET}
+      - COOKIE_SECRET=${COOKIE_SECRET}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+    depends_on:
+      - mongo
+    volumes:
+      - .:/app               # mount source so edits reflect without rebuild
+      - /app/node_modules    # keep container's node_modules, don't overwrite with host
+
+  mongo:
+    image: mongo:4
+    restart: always
+    ports:
+      - "127.0.0.1:27017:27017"   # loopback only — reachable from this machine (Compass), not the LAN/internet
+    volumes:
+      - mongo_data:/data/db  # persist data across container restarts
+
+volumes:
+  mongo_data:

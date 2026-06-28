@@ -1,5 +1,4 @@
 var passport = require('passport');
-var Account = require('../models/account');
 var api = require('./api');
 
 // Invoke 'strict' JavaScript mode
@@ -9,32 +8,15 @@ var api = require('./api');
 exports.getIndex = function(req, res) {
   api.randomVideoID(req.user, function(err, vidID)
   {
-    res.render('index', { videoID : vidID, user: req.user });
-  });
-};
-
-// handler for a GET request for the registration page
-exports.getRegister = function(req, res) {
-  res.render('register', { });
-};
-
-// handler for the POST request for registering a user
-exports.postRegister = function(req, res) {
-  // passport-local-mongoose acts as middleware here.  No plaintext passwords should be stored (feel free to double check this)
-  Account.register(new Account({ username : req.body.username }), req.body.password, function(err, account) {
-    if (err) {
-      return res.render('register', { account : account });
-    }
-
-    passport.authenticate('local')(req, res, function () {
-      res.redirect('/');
-    });
+    if (err) return res.status(500).send('Database error');
+    // No videos in DB yet — render with a placeholder
+    res.render('index', { videoID: vidID || '', user: req.user });
   });
 };
 
 // handler for a GET request for the login page
 exports.getLogin = function(req, res) {
-  res.render('login', { user : req.user });
+  res.render('login', { user : req.user, csrfToken: req.csrfToken() });
 };
 
 // handler for the POST request for logging in a user
@@ -53,6 +35,11 @@ exports.getLogout = function(req, res) {
 // handler for the GET request for the about page
 exports.getAbout = function(req, res) {
   res.render('about', { user : req.user });
+};
+
+// handler for the GET request for the "but why though?" page
+exports.getButWhy = function(req, res) {
+  res.render('butwhy', { user : req.user });
 };
 
 // handler for the GET request for the history page

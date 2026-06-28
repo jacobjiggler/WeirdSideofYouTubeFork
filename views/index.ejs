@@ -2,83 +2,83 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Weird Side of YouTube</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Weird Side of YouTube — Random Weird Videos</title>
+  <meta name="description" content="Click one button and dive into the weird side of YouTube — a hand-picked stream of strange, surreal, and hilarious videos served up at random.">
+  <link rel="canonical" href="https://weirdtube.wtf/">
+
+  <!-- Open Graph (Facebook, Discord, iMessage, etc.) -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://weirdtube.wtf/">
+  <meta property="og:title" content="The Weird Side of YouTube">
+  <meta property="og:description" content="Hit 'Get Weird' and get a random strange YouTube video. Endlessly.">
+  <meta property="og:image" content="https://weirdtube.wtf/og-image.png">
+
+  <!-- Twitter / X card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="The Weird Side of YouTube">
+  <meta name="twitter:description" content="Hit 'Get Weird' and get a random strange YouTube video. Endlessly.">
+  <meta name="twitter:image" content="https://weirdtube.wtf/og-image.png">
+
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/pure-min.css" integrity="sha384-UQiGfs9ICog+LwheBSRCt1o5cbyKIHbwjWscjemyBMT9YCUMZffs6UqUTd0hObXD" crossorigin="anonymous">
-  <link rel="stylesheet" type="text/css" href="./css/newstyle.css">
-  <link href="https://fonts.googleapis.com/css?family=Barrio" rel="stylesheet">
-  <style>
-  #title {
-    text-align: center;
-    font-family: 'Barrio', cursive;
-    font-size: 32px;
-    font-style: normal;
-    font-variant: small-caps;
-    font-weight: 100px;
-    line-height: 50px;
-    margin-left: auto;
-    margin-right: auto;
-    color: rgb(240, 240, 240);
-  }
-  </style>
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
-  <script type='text/javascript' src='./js/jQuery.tubeplayer.min.js'></script>
-  <script type='text/javascript'>
-    window.initVid = '<%= videoID %>';
-  </script>
+  <link rel="stylesheet" type="text/css" href="./css/WeirdStyle.css">
+  <link href="https://fonts.googleapis.com/css?family=Damion" rel="stylesheet">
 </head>
 
 <body>
 
-  <div class="custom-menu-wrapper">
-    <div class="pure-menu custom-menu">
-      <a href="/" class="pure-menu-heading custom-menu-brand">Home</a>
-      <a href="#" class="custom-menu-toggle" id="toggle"><s class="bar"></s><s class="bar"></s></a>
-    </div>
-    <div class="pure-menu pure-menu-horizontal pure-menu-scrollable custom-menu custom-menu-bottom custom-menu-tucked" id="tuckedMenu">
-      <div class="custom-menu-screen"></div>
-      <ul class="pure-menu-list">
-        <li class="pure-menu-item"><a href="/about" class="pure-menu-link">About Us</a></li>
-        <%if (user) { %>
-          <%if (user.admin) { %>
-            <li class="pure-menu-item"><a href="/admin" class="pure-menu-link">Admin Panel</a></li>
-          <% } %>
-          <li class="pure-menu-item"><a href="/history" class="pure-menu-link">View History</a></li>
-          <li class="pure-menu-item"><a href="/logout" class="pure-menu-link">Logout</a></li>
-          <li class="pure-menu-item"><a class="pure-menu-link custom-menu-brand"> Username: <%= user.username %></a></li>
+  <div id="navbar">
+    <ul>
+      <li><a href="/">Home</a></li>
+      <li><a href="/about">About Us</a></li>
+      <li><a href="/butwhy">But Why Though?</a></li>
+      <%if (user) { %>
+        <%if (user.admin) { %>
+          <li><a href="/admin">Admin Panel</a></li>
         <% } %>
-        <%if (!user) { %>
-          <li class="pure-menu-item"><a href="/login" class="pure-menu-link">Login</a></li>
-          <li class="pure-menu-item"><a href="/register" class="pure-menu-link">Register</a></li>
-        <% } %>
-      </ul>
+        <li><a href="/history">View History</a></li>
+        <li><a href="/logout">Logout</a></li>
+        <li><p>Username: <%= user.username %></p></li>
+      <% } %>
+      <%if (!user) { %>
+        <li><a href="/login">Login</a></li>
+      <% } %>
+    </ul>
+  </div>
+
+  <div class="titlebox">
+    <span class="t1">The Weird Side of YouTube</span>
+  </div>
+
+  <!-- Splash: visible on load -->
+  <div id="splash">
+    <div class="gobutton" id="gobutton">
+      <span>Get Weird</span>
     </div>
   </div>
+
+  <!-- Player: hidden until Get Weird is clicked -->
+  <div id='youtube-player-container' style="display:none;">
+    <div id="player-wrapper">
+      <div id='youtube-player'></div>
+    </div>
+    <div id="playDiv">
+      <a id="playerbutton" class="playerbutton">
+        <span>Next</span>
+      </a>
+    </div>
+  </div>
+
+  <script type="text/javascript" src="videos.js"></script>
   <script>
-  (function (window, document) {
-  document.getElementById('toggle').addEventListener('click', function (e) {
-      document.getElementById('tuckedMenu').classList.toggle('custom-menu-tucked');
-      document.getElementById('toggle').classList.toggle('x');
-  });
-  })(this, this.document);
+    document.getElementById('gobutton').addEventListener('click', function() {
+      document.getElementById('splash').style.display = 'none';
+      document.getElementById('youtube-player-container').style.display = 'block';
+      playNextVid();
+    });
   </script>
 
-<div id='title'>
-   <h1>Weird Side of YouTube</h1>
-</div>
-
-<div id='youtube-player-container'>
-  <div id='youtube-player'></div>
-</div>
-
-<div id="playDiv">
-  <a id="playerbutton" class="playerbutton" onclick="playNextVid();">
-        <span>Next</span>
-  </a>
-</div>
-
-<script type="text/javascript" src="videos.js"></script>
-
 </body>
-
-
 </html>

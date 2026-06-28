@@ -7,7 +7,6 @@
 <script type='text/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js'></script>
 </head>
 
-<!-- <link rel="stylesheet" type="text/css" href="./style.css"> -->
 <body>
 
   <div class="custom-menu-wrapper">
@@ -19,6 +18,7 @@
       <div class="custom-menu-screen"></div>
       <ul class="pure-menu-list">
         <li class="pure-menu-item"><a href="/about" class="pure-menu-link">About Us</a></li>
+        <li class="pure-menu-item"><a href="/butwhy" class="pure-menu-link">But Why Though?</a></li>
         <%if (user) { %>
           <%if (user.admin) { %>
             <li class="pure-menu-item"><a href="/admin" class="pure-menu-link">Admin Panel</a></li>
@@ -29,8 +29,7 @@
         <% } %>
         <%if (!user) { %>
           <li class="pure-menu-item"><a href="/login" class="pure-menu-link">Login</a></li>
-          <li class="pure-menu-item"><a href="/register" class="pure-menu-link">Register</a></li>
-        <% } %>
+          <% } %>
       </ul>
     </div>
   </div>
@@ -61,9 +60,9 @@
 				$('<tr id="' + value.videoID + '" class="videoRow">').append(
           $('<td class = "data-cell">').html('<a href="http://www.youtube.com/watch?v=' +
           value.videoID + '">' + value.videoID + '</a>'),
-					$('<td class = "data-cell">').html('<img src="//i.ytimg.com/vi/' + value.videoID + '/default.jpg" />'),
-					$('<td class = "data-cell">').attr("id", "title"),
-					$('<td class = "data-cell">').text(value.time)
+				$('<td class = "data-cell">').html('<img src="//i.ytimg.com/vi/' + value.videoID + '/default.jpg" />'),
+				$('<td class = "data-cell">').attr("id", "title"),
+				$('<td class = "data-cell">').text(value.time)
 				).appendTo( "#videoTable" );
 				$.getJSON("/api/getVidInfo/" + value.videoID, function(data) {
 					$('#videoTable').find('#'+value.videoID).find('#title').text(data.items[0].snippet.title);
