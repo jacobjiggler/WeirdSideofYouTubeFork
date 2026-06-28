@@ -6,11 +6,16 @@ var api = require('./api');
 
 // handler for a GET request for the index
 exports.getIndex = function(req, res) {
-  api.randomVideoID(req.user, function(err, vidID)
+  if (!req.session.seenVideos) req.session.seenVideos = [];
+  api.randomVideoID(req.session.seenVideos, function(err, doc)
   {
     if (err) return res.status(500).send('Database error');
-    // No videos in DB yet — render with a placeholder
-    res.render('index', { videoID: vidID || '', user: req.user });
+    var videoID = '';
+    if (doc) {
+      videoID = doc.videoID;
+      req.session.seenVideos.push(doc.videoID);
+    }
+    res.render('index', { videoID: videoID, user: req.user });
   });
 };
 
