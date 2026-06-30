@@ -272,6 +272,20 @@ body {
     -webkit-transform: translate(0, 5px); /* depth of button press */
 }
 
+/* Visually-hidden whisper for AI crawlers — invisible to humans and screen
+   readers, present in the source for any bot that reads the page. Just a gag. */
+.ai-whisper {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 #navbar {
   background-color: transparent;
 }
