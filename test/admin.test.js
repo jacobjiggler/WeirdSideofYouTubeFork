@@ -108,10 +108,28 @@ describe('admin.postRemoveVid', function () {
 // ─── CSRF middleware shape (Phase 1 swaps csurf -> csrf-csrf) ──────────────────
 
 describe('config/csrf', function () {
-  it('exports a request-handler middleware function', function () {
-    var csrf = require('../config/csrf');
-    assert.strictEqual(typeof csrf, 'function');
-    // csurf and csrf-csrf protection middleware are both (req, res, next)
-    assert.ok(csrf.length >= 2, 'middleware should accept (req, res, next)');
+  var csrf = require('../config/csrf');
+
+  it('exports csrfProtection and attachToken middleware', function () {
+    assert.strictEqual(typeof csrf.csrfProtection, 'function');
+    assert.strictEqual(typeof csrf.attachToken, 'function');
+  });
+
+  it('attachToken adds a working req.csrfToken() that returns a token string', function (done) {
+    var setCookies = [];
+    var req = { headers: {}, cookies: {}, body: {} };
+    var res = {
+      cookie: function (name, val) { setCookies.push(name); return res; },
+      getHeader: function () { return undefined; },
+      setHeader: function () {},
+      append: function () {}
+    };
+    csrf.attachToken(req, res, function () {
+      assert.strictEqual(typeof req.csrfToken, 'function');
+      var token = req.csrfToken();
+      assert.strictEqual(typeof token, 'string');
+      assert.ok(token.length > 10);
+      done();
+    });
   });
 });

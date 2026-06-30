@@ -10,7 +10,6 @@
 // Back up the DB first (tools/backup_db.ps1).
 
 var mongoose = require('mongoose');
-var request = require('request');
 var Video = require('../models/video');
 var Counter = require('../models/counters');
 var database = require('../config/db');
@@ -35,13 +34,18 @@ function checkLive(ids, cb) {
     var batch = batches[b++];
     var url = 'https://www.googleapis.com/youtube/v3/videos?part=status&id=' +
       batch.map(encodeURIComponent).join(',') + '&key=' + API_KEY;
-    request(url, function (err, res, body) {
-      if (err || res.statusCode !== 200) {
-        console.error('API error: ' + (err ? err.message : 'HTTP ' + res.statusCode + ' ' + body));
+    fetch(url).then(function (res) {
+      return res.text().then(function (body) { return { status: res.status, body: body }; });
+    }).then(function (r) {
+      if (r.status !== 200) {
+        console.error('API error: HTTP ' + r.status + ' ' + r.body);
         process.exit(1);
       }
-      JSON.parse(body).items.forEach(function (it) { live[it.id] = true; });
+      JSON.parse(r.body).items.forEach(function (it) { live[it.id] = true; });
       next();
+    }).catch(function (e) {
+      console.error('API error: ' + e.message);
+      process.exit(1);
     });
   })();
 }

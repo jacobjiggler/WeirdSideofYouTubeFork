@@ -7,7 +7,6 @@ var Counter = require('../models/counters');
 var VideoHistory = require('../models/videohistory');
 var Chance = require('chance');
 var chance = new Chance();
-var request = require('request');
 var BannedVideo = require('../models/bannedvideo');
 
 // internal function for adding a video to the database
@@ -215,11 +214,16 @@ exports.getVideoInfo = function (req, res)
   if (!youtubeAPIKey) {
     return res.status(500).json({ error: 'YOUTUBE_API_KEY environment variable is not set' });
   }
-  request('https://www.googleapis.com/youtube/v3/videos?part=snippet&id=' + req.params.videoID + '&key=' + youtubeAPIKey, function (error, response, body)
-  {
-    if (!error && response.statusCode == 200)
-    {
-      res.send(body);
-    }
-  });
+  var url = 'https://www.googleapis.com/youtube/v3/videos?part=snippet&id=' +
+    encodeURIComponent(req.params.videoID) + '&key=' + youtubeAPIKey;
+  fetch(url)
+    .then(function (response) {
+      return response.text().then(function (body) {
+        if (response.ok) return res.send(body);
+        return res.status(502).json({ error: 'YouTube API request failed' });
+      });
+    })
+    .catch(function (err) {
+      res.status(502).json({ error: err.message });
+    });
 };

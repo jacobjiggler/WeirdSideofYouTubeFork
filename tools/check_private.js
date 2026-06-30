@@ -9,7 +9,6 @@
 //   node tools/check_private.js --json     # machine-readable output
 
 var mongoose = require('mongoose');
-var request = require('request');
 var Video = require('../models/video');
 var database = require('../config/db');
 
@@ -53,14 +52,15 @@ Video.find({}, { _id: 1, videoID: 1 }).lean().exec(function (err, vids) {
     var url = 'https://www.googleapis.com/youtube/v3/videos?part=status,snippet&id=' +
       encodedIds + '&key=' + API_KEY;
 
-    request(url, function (error, response, body) {
-      if (error || response.statusCode !== 200) {
-        console.error('\nAPI error on batch ' + b + ': ' +
-          (error ? error.message : 'HTTP ' + response.statusCode + ' ' + body));
+    fetch(url).then(function (response) {
+      return response.text().then(function (body) { return { status: response.status, body: body }; });
+    }).then(function (r) {
+      if (r.status !== 200) {
+        console.error('\nAPI error on batch ' + b + ': HTTP ' + r.status + ' ' + r.body);
         process.exit(1);
       }
 
-      var data = JSON.parse(body);
+      var data = JSON.parse(r.body);
       var returned = {};
       data.items.forEach(function (item) {
         returned[item.id] = item;
@@ -75,6 +75,9 @@ Video.find({}, { _id: 1, videoID: 1 }).lean().exec(function (err, vids) {
 
       if (!asJson) process.stdout.write('Checked batch ' + b + '/' + batches.length + '\r');
       nextBatch();
+    }).catch(function (e) {
+      console.error('\nAPI error on batch ' + b + ': ' + e.message);
+      process.exit(1);
     });
   }
 

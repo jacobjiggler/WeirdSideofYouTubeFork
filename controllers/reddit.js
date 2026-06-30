@@ -2,13 +2,16 @@
 'use strict';
 
 var api = require('./api');
-var request = require('request');
 
 exports.crawlRedditUrl = function(reddit_url)
 {
-  request(reddit_url, function (error, response, body) {
-    if (!error && response.statusCode == 200) {
-      var reqJSON = JSON.parse(body);
+  fetch(reddit_url, { headers: { 'User-Agent': 'weirdtube.wtf crawler' } })
+    .then(function (response) {
+      if (!response.ok) return null;
+      return response.json();
+    })
+    .then(function (reqJSON) {
+      if (!reqJSON) return;
       for(var i = 0; i < reqJSON.data.children.length; i++)
       {
         var url = reqJSON.data.children[i].data.url;
@@ -21,8 +24,8 @@ exports.crawlRedditUrl = function(reddit_url)
           });
         }
       }
-    }
-  });
+    })
+    .catch(function (err) { console.log('Reddit crawl error: ' + err.message); });
 };
 
 // handles the POST request for crawling reddit

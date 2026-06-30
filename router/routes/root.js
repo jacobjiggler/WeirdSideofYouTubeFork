@@ -2,7 +2,7 @@ var express = require('express');
 var router = express.Router();
 var rateLimit = require('express-rate-limit').rateLimit;
 var root = require('../../controllers/root');
-var csrfProtection = require('../../config/csrf');
+var csrf = require('../../config/csrf');
 
 // Throttle login attempts to slow brute-force guessing.
 var loginLimiter = rateLimit({
@@ -24,8 +24,8 @@ function coerceCredentials(req, res, next) {
 }
 
 router.get('/', root.getIndex);
-router.get('/login', csrfProtection, root.getLogin);
-router.post('/login', loginLimiter, coerceCredentials, csrfProtection, root.postLogin);
+router.get('/login', csrf.attachToken, root.getLogin);
+router.post('/login', loginLimiter, coerceCredentials, csrf.csrfProtection, root.postLogin);
 router.get('/logout', root.getLogout);
 router.get('/about', root.getAbout);
 router.get('/butwhy', root.getButWhy);
