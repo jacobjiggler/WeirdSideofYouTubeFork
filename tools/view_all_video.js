@@ -10,28 +10,32 @@ var BannedVideo = require('../models/bannedvideo.js');
 
 mongoose.connect(database.url);
 
-Video.find({}, function(err, docs)
+async function main()
 {
-  docs.forEach(function(doc)
+  var videos = await Video.find({});
+  videos.forEach(function(doc)
   {
     console.info('VidID: ' + doc.videoID);
   });
-  BannedVideo.find({}, function(err, docs)
-  {
-    docs.forEach(function(doc)
-    {
-      console.info('Banned VidID: ' + doc.videoID);
-    });
-    Counter.findById('bannedvideos', function (err, count)
-    {
-      console.info(count.seq + ' banned videos exist');
-    });
 
-    Counter.findById('videos', function (err, count)
-    {
-      console.info(count.seq + ' known videos exist');
-      mongoose.connection.close();
-      process.exit(0);
-    });
+  var banned = await BannedVideo.find({});
+  banned.forEach(function(doc)
+  {
+    console.info('Banned VidID: ' + doc.videoID);
   });
+
+  var bannedCount = await Counter.findById('bannedvideos');
+  console.info((bannedCount ? bannedCount.seq : 0) + ' banned videos exist');
+
+  var videoCount = await Counter.findById('videos');
+  console.info((videoCount ? videoCount.seq : 0) + ' known videos exist');
+
+  await mongoose.connection.close();
+  process.exit(0);
+}
+
+main().catch(function (err)
+{
+  console.error(err);
+  process.exit(1);
 });

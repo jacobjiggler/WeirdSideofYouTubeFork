@@ -9,8 +9,13 @@ var Chance = require('chance');
 var chance = new Chance();
 var BannedVideo = require('../models/bannedvideo');
 
-// internal function for adding a video to the database
-exports.addVideo = function (video_url_or_id, callback)
+// internal function for adding a video to the database.
+// Keeps its callback signature (callback(err, vidOrId)) so route handlers and
+// the tools/* CLIs don't change; the Mongoose calls inside are now promise-based
+// (Mongoose 7+ dropped callbacks). On a new video it calls back with the created
+// doc; on a duplicate/banned video it calls back with the plain id string (callers
+// distinguish "added" from "skipped" by checking for .videoID).
+exports.addVideo = async function (video_url_or_id, callback)
 {
   var video_split = video_url_or_id.match(/(?:https?:\/{2})?(?:w{3}\.)?youtu(?:be)?\.(?:com|be)(?:\/watch\?v=|\/)([^\s&\?]+)/);
   var vidID = video_url_or_id;
@@ -18,78 +23,55 @@ exports.addVideo = function (video_url_or_id, callback)
   {
     vidID = video_split[1];
   }
-  BannedVideo.findOne({ 'videoID': vidID }, function (error, vid)
+  try
   {
-    if (!vid)
-    {
-      Video.findOne({ 'videoID': vidID }, function (error, vid)
-      {
-        if (!vid)
-        {
-          Counter.findByIdAndUpdate('videos', { $inc: { seq: 1 } }, { new: true, upsert: true, setDefaultsOnInsert: true }, function (error, counter)
-          {
-            if (error)
-              return callback(error);
-            Video.create({ 'videoID': vidID, '_id': counter.seq }, function (err, vid)
-            {
-              if (err)
-                console.log(err);
-              callback(err, vid);
-            });
-          });
-        }
-        else
-        {
-          callback(null, vidID);
-        }
-      });
-    }
-    else
-    {
-      callback(null, vidID);
-    }
-  });
+    var banned = await BannedVideo.findOne({ 'videoID': vidID });
+    if (banned) return callback(null, vidID);
+
+    var existing = await Video.findOne({ 'videoID': vidID });
+    if (existing) return callback(null, vidID);
+
+    var counter = await Counter.findByIdAndUpdate('videos', { $inc: { seq: 1 } }, { new: true, upsert: true, setDefaultsOnInsert: true });
+    var vid = await Video.create({ 'videoID': vidID, '_id': counter.seq });
+    callback(null, vid);
+  }
+  catch (err)
+  {
+    console.log(err);
+    callback(err);
+  }
 };
 
-exports.removeVideoNoParse = function (vidID)
+exports.removeVideoNoParse = async function (vidID)
 {
-  BannedVideo.findOne({ 'videoID': vidID }, function (error, vid)
+  try
   {
-    if (!vid)
+    var banned = await BannedVideo.findOne({ 'videoID': vidID });
+    if (!banned)
     {
-      Counter.findByIdAndUpdate('bannedvideos', { $inc: { seq: 1 } }, { new: true, upsert: true, setDefaultsOnInsert: true }, function (error, counter)
-      {
-        if (error)
-          return console.error(error);
-        BannedVideo.create({ 'videoID': vidID, '_id': counter.seq }, function (err, vid)
-        {
-          if (err)
-            console.log(err);
-        });
-      });
+      var bannedCounter = await Counter.findByIdAndUpdate('bannedvideos', { $inc: { seq: 1 } }, { new: true, upsert: true, setDefaultsOnInsert: true });
+      await BannedVideo.create({ 'videoID': vidID, '_id': bannedCounter.seq });
     }
-  });
 
-  Video.findOne({ 'videoID': vidID }, function (error, video)
-  {
+    var video = await Video.findOne({ 'videoID': vidID });
     if (!video) return;
     var __id = video._id;
-    Counter.findById('videos', function (error, counter)
-    {
-      if (!counter) return;
-      Video.findOne({ '_id': counter.seq }, function (error, _video)
-      {
-        if (!_video) return;
-        video.remove();
-        Video.create({ 'videoID': _video.videoID, '_id': __id }, function (err, vid)
-        {
-          _video.remove();
-          counter.seq = counter.seq - 1;
-          counter.save();
-        });
-      });
-    });
-  });
+    var counter = await Counter.findById('videos');
+    if (!counter) return;
+    // Move the highest-_id video into the freed slot so _id stays contiguous
+    // 1..seq (admin tooling and getVidRange rely on this).
+    var _video = await Video.findOne({ '_id': counter.seq });
+    if (!_video) return;
+    await video.deleteOne();
+    await Video.create({ 'videoID': _video.videoID, '_id': __id });
+    await _video.deleteOne();
+    counter.seq = counter.seq - 1;
+    await counter.save();
+  }
+  catch (err)
+  {
+    console.error(err);
+  }
 };
 
 // internal function for removing a video by youtube ID
@@ -110,22 +92,26 @@ exports.removeVideo = function (video_url_or_id)
 // Returns a random video doc that isn't in seenVideoIDs.
 // If all videos have been seen, resets seenVideoIDs to [] and retries once so
 // the session can loop the catalog forever without hitting a dead end.
+// Keeps its callback signature; Video.aggregate is promise-based now.
 exports.randomVideoID = function (seenVideoIDs, callback)
 {
   Video.aggregate([
     { $match: { videoID: { $nin: seenVideoIDs } } },
     { $sample: { size: 1 } }
-  ], function (err, docs)
+  ]).then(function (docs)
   {
-    if (err) return callback(err);
     if (!docs.length)
     {
       if (seenVideoIDs.length === 0) return callback(null, null); // DB truly empty
       return exports.randomVideoID([], callback);                  // exhausted → reset & retry
     }
     var doc = docs[0];
-    Video.findByIdAndUpdate(doc._id, { $inc: { views: 1 } }, function () {});
+    // Fire-and-forget view bump; failures here must not break playback.
+    Video.findByIdAndUpdate(doc._id, { $inc: { views: 1 } }).catch(function () {});
     callback(null, doc);
+  }, function (err)
+  {
+    callback(err);
   });
 };
 
@@ -140,22 +126,21 @@ exports.getRandomVid = function (req, res)
     req.session.seenVideos.push(doc.videoID);
     if (req.user)
     {
-      VideoHistory.create({ 'username': req.user.username, 'videoID': doc.videoID }, function (err)
-      {
-        if (err) console.log(err);
-      });
+      VideoHistory.create({ 'username': req.user.username, 'videoID': doc.videoID })
+        .catch(function (err) { console.log(err); });
     }
     res.json({ 'vidID': doc.videoID });
   });
 };
 
 // handler for a GET request for a range of videos
-exports.getVidRange = function (req, res)
+exports.getVidRange = async function (req, res)
 {
-  var start_id = parseInt(req.params.start);
-  var end_id = parseInt(req.params.end);
-  Counter.findById('videos', function (error, counter)
+  try
   {
+    var start_id = parseInt(req.params.start);
+    var end_id = parseInt(req.params.end);
+    var counter = await Counter.findById('videos');
     if (!counter) return res.json([]);
 
     var smallestID = 1;
@@ -166,45 +151,59 @@ exports.getVidRange = function (req, res)
     var len = end_id - start_id + 1;
     if (len > 50) len = 50;
 
-    Video.find({ _id: { $gte: start_id } }, { 'videoID': 1 }).limit(len).lean().exec(function (err, docs)
-    {
-      res.json(docs);
-    });
-  });
+    var docs = await Video.find({ _id: { $gte: start_id } }, { 'videoID': 1 }).limit(len).lean();
+    res.json(docs);
+  }
+  catch (err)
+  {
+    res.status(500).json({ error: err.message });
+  }
 };
 
 // handler for a GET request for a user's video history
-exports.getVideoHistory = function (req, res)
+exports.getVideoHistory = async function (req, res)
 {
-  if (req.user)
+  if (!req.user)
   {
-    VideoHistory.find({ username: req.user.username }, { '_id': 0, 'videoID': 1, 'time': 1 }).sort({ time: -1 }).limit(50).exec(function (error, history)
-    {
-      res.json(history);
-    });
+    return res.status(401).send('User is not logged in');
   }
-  else
+  try
   {
-    res.status(401).send('User is not logged in');
+    var history = await VideoHistory.find({ username: req.user.username }, { '_id': 0, 'videoID': 1, 'time': 1 }).sort({ time: -1 }).limit(50);
+    res.json(history);
+  }
+  catch (err)
+  {
+    res.status(500).json({ error: err.message });
   }
 };
 
 // handler for a GET request for the number of videos in the database
-exports.getNumVids = function (req, res)
+exports.getNumVids = async function (req, res)
 {
-  Counter.findById('videos', function (err, count)
+  try
   {
+    var count = await Counter.findById('videos');
     res.json({ 'numVids': count ? count.seq : 0 });
-  });
+  }
+  catch (err)
+  {
+    res.status(500).json({ error: err.message });
+  }
 };
 
 // handler for a GET request for the number of banned videos
-exports.getNumBannedVids = function (req, res)
+exports.getNumBannedVids = async function (req, res)
 {
-  Counter.findById('bannedvideos', function (err, count)
+  try
   {
+    var count = await Counter.findById('bannedvideos');
     res.json({ 'numBannedVids': count ? count.seq : 0 });
-  });
+  }
+  catch (err)
+  {
+    res.status(500).json({ error: err.message });
+  }
 };
 
 // handler for a request for video information from the YouTube API

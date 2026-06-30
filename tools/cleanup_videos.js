@@ -50,8 +50,7 @@ function checkLive(ids, cb) {
   })();
 }
 
-Video.find({}).sort({ _id: 1 }).lean().exec(function (err, docs) {
-  if (err) { console.error(err); process.exit(1); }
+Video.find({}).sort({ _id: 1 }).lean().then(function (docs) {
 
   // First pass: which well-formed IDs are currently live?
   var wellFormed = docs.filter(function (d) { return VALID.test(d.videoID); })
@@ -130,17 +129,20 @@ Video.find({}).sort({ _id: 1 }).lean().exec(function (err, docs) {
       keep.forEach(function (doc, i) { doc._id = i + 1; });
 
       console.log('\nApplying changes...');
-      Video.remove({}, function (rmErr) {
-        if (rmErr) { console.error('Failed clearing videos: ' + rmErr.message); process.exit(1); }
-        Video.insertMany(keep, function (insErr) {
-          if (insErr) { console.error('Failed inserting videos: ' + insErr.message); process.exit(1); }
-          Counter.update({ _id: 'videos' }, { $set: { seq: keep.length } }, { upsert: true }, function (cErr) {
-            if (cErr) { console.error('Failed updating counter: ' + cErr.message); process.exit(1); }
-            console.log('Done. ' + keep.length + ' videos remain, counter seq = ' + keep.length + '.');
-            process.exit(0);
-          });
-        });
+      Video.deleteMany({}).then(function () {
+        return Video.insertMany(keep);
+      }).then(function () {
+        return Counter.updateOne({ _id: 'videos' }, { $set: { seq: keep.length } }, { upsert: true });
+      }).then(function () {
+        console.log('Done. ' + keep.length + ' videos remain, counter seq = ' + keep.length + '.');
+        process.exit(0);
+      }).catch(function (err) {
+        console.error('Failed applying changes: ' + err.message);
+        process.exit(1);
       });
     });
   });
+}).catch(function (err) {
+  console.error(err);
+  process.exit(1);
 });

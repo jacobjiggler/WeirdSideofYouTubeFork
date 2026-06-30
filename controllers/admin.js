@@ -38,11 +38,13 @@ exports.postRemoveVid = function(req, res) {
 };
 
 // Privileged version of /api/getVidRange
-exports.getVidRangeAdmin = function(req, res) {
-  var start_id = parseInt(req.params.start);
-  var end_id = parseInt(req.params.end);
-  Counter.findById('videos', function(_error, _counter)
+exports.getVidRangeAdmin = async function(req, res) {
+  try
   {
+    var start_id = parseInt(req.params.start);
+    var end_id = parseInt(req.params.end);
+    await Counter.findById('videos');
+
     var smallestID = 1;
 
     if(start_id < smallestID)
@@ -59,10 +61,13 @@ exports.getVidRangeAdmin = function(req, res) {
       len = 50;
     }
 
-    Video.find({_id: {$gte: start_id }}, {'_id':1, 'videoID':1, 'views':1, 'errorCount':1, 'skips':1, 'time':1, 'submittedUser':1}).limit(len).lean().exec(function (err, docs) {
-      res.json(docs);
-    });
-  });
+    var docs = await Video.find({_id: {$gte: start_id }}, {'_id':1, 'videoID':1, 'views':1, 'errorCount':1, 'skips':1, 'time':1, 'submittedUser':1}).limit(len).lean();
+    res.json(docs);
+  }
+  catch (err)
+  {
+    res.status(500).json({ error: err.message });
+  }
 };
 
 // handles the POST request for crawling reddit

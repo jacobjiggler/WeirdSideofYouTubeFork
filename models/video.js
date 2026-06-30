@@ -12,7 +12,7 @@ var Video = new Schema({
   cache: [{type: Schema.Types.ObjectId, ref: 'VideoCache'}]
 });
 
-Video.index({_id: 1}, {unique: true});
+// _id is indexed uniquely by MongoDB automatically; only videoID needs one.
 Video.index({videoID: 1}, {unique: true});
 
 module.exports = mongoose.model('Video', Video);

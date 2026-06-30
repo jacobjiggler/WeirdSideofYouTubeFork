@@ -6,7 +6,7 @@ var BannedVideo = new Schema({
   videoID: String,
 });
 
-BannedVideo.index({ _id: 1 }, { unique: true });
+// _id is indexed uniquely by MongoDB automatically; only videoID needs one.
 BannedVideo.index({ videoID: 1 }, { unique: true });
 
 module.exports = mongoose.model('BannedVideo', BannedVideo);

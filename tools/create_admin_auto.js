@@ -2,7 +2,6 @@
 // Non-interactive version: node tools/create_admin_auto.js <username> <password>
 
 var mongoose = require('mongoose');
-mongoose.Promise = global.Promise;
 var Account = require('../models/account');
 var database = require('../config/db');
 

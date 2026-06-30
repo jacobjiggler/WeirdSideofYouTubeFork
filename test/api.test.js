@@ -28,7 +28,8 @@ describe('randomVideoID', function () {
   beforeEach(function () {
     origAggregate = Video.aggregate;
     origFBIAU     = Video.findByIdAndUpdate;
-    Video.findByIdAndUpdate = function () {}; // fire-and-forget — ignore in tests
+    // fire-and-forget view bump — returns a promise so randomVideoID's .catch works
+    Video.findByIdAndUpdate = function () { return Promise.resolve(); };
   });
 
   afterEach(function () {
@@ -38,7 +39,7 @@ describe('randomVideoID', function () {
 
   it('returns a video doc when unseen videos exist', function (done) {
     var fakeDoc = { _id: 1, videoID: 'abc123' };
-    Video.aggregate = function (_pipeline, cb) { cb(null, [fakeDoc]); };
+    Video.aggregate = function (_pipeline) { return Promise.resolve([fakeDoc]); };
 
     api.randomVideoID([], function (err, doc) {
       assert.ifError(err);
@@ -48,7 +49,7 @@ describe('randomVideoID', function () {
   });
 
   it('returns null when DB is truly empty (seen list also empty)', function (done) {
-    Video.aggregate = function (_pipeline, cb) { cb(null, []); };
+    Video.aggregate = function (_pipeline) { return Promise.resolve([]); };
 
     api.randomVideoID([], function (err, doc) {
       assert.ifError(err);
@@ -60,16 +61,16 @@ describe('randomVideoID', function () {
   it('resets and retries when all videos have been seen', function (done) {
     var fakeDoc = { _id: 1, videoID: 'xyz789' };
     var callCount = 0;
-    Video.aggregate = function (pipeline, cb) {
+    Video.aggregate = function (pipeline) {
       callCount++;
       if (callCount === 1) {
         // First call should exclude the seen video
         assert.deepStrictEqual(pipeline[0].$match.videoID.$nin, ['xyz789']);
-        cb(null, []);
+        return Promise.resolve([]);
       } else {
         // Second call (after reset) should pass empty exclusion list
         assert.deepStrictEqual(pipeline[0].$match.videoID.$nin, []);
-        cb(null, [fakeDoc]);
+        return Promise.resolve([fakeDoc]);
       }
     };
 
@@ -84,9 +85,9 @@ describe('randomVideoID', function () {
   it('passes the full seen list to $nin', function (done) {
     var seen = ['v1', 'v2', 'v3'];
     var capturedPipeline;
-    Video.aggregate = function (pipeline, cb) {
+    Video.aggregate = function (pipeline) {
       capturedPipeline = pipeline;
-      cb(null, [{ _id: 4, videoID: 'v4' }]);
+      return Promise.resolve([{ _id: 4, videoID: 'v4' }]);
     };
 
     api.randomVideoID(seen, function (err) {
@@ -97,7 +98,7 @@ describe('randomVideoID', function () {
   });
 
   it('propagates aggregate errors to callback', function (done) {
-    Video.aggregate = function (_pipeline, cb) { cb(new Error('DB went kaboom')); };
+    Video.aggregate = function (_pipeline) { return Promise.reject(new Error('DB went kaboom')); };
 
     api.randomVideoID([], function (err) {
       assert.ok(err);
@@ -116,7 +117,7 @@ describe('getRandomVid', function () {
   beforeEach(function () {
     origRandomVideoID  = api.randomVideoID;
     origHistoryCreate  = VideoHistory.create;
-    VideoHistory.create = function () {};
+    VideoHistory.create = function () { return Promise.resolve(); };
   });
 
   afterEach(function () {
@@ -194,11 +195,11 @@ describe('getRandomVid', function () {
     var fakeDoc = { _id: 1, videoID: 'abc123' };
     api.randomVideoID = function (_seen, cb) { cb(null, fakeDoc); };
     var historyCalled = false;
-    VideoHistory.create = function (data, cb) {
+    VideoHistory.create = function (data) {
       assert.strictEqual(data.username, 'testuser');
       assert.strictEqual(data.videoID, 'abc123');
       historyCalled = true;
-      if (cb) cb(null);
+      return Promise.resolve();
     };
 
     var req = makeReq({ session: {}, user: { username: 'testuser' } });
@@ -214,7 +215,7 @@ describe('getRandomVid', function () {
     var fakeDoc = { _id: 1, videoID: 'abc123' };
     api.randomVideoID = function (_seen, cb) { cb(null, fakeDoc); };
     var historyCalled = false;
-    VideoHistory.create = function () { historyCalled = true; };
+    VideoHistory.create = function () { historyCalled = true; return Promise.resolve(); };
 
     var req = makeReq({ session: {}, user: null });
     var res = makeRes();

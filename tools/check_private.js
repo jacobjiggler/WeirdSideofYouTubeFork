@@ -22,8 +22,7 @@ var asJson = process.argv.indexOf('--json') !== -1;
 
 mongoose.connect(database.url);
 
-Video.find({}, { _id: 1, videoID: 1 }).lean().exec(function (err, vids) {
-  if (err) { console.error(err); process.exit(1); }
+Video.find({}, { _id: 1, videoID: 1 }).lean().then(function (vids) {
 
   var allIds = vids.map(function (v) { return v.videoID; });
 
@@ -128,4 +127,7 @@ Video.find({}, { _id: 1, videoID: 1 }).lean().exec(function (err, vids) {
   }
 
   nextBatch();
+}).catch(function (err) {
+  console.error(err);
+  process.exit(1);
 });

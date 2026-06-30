@@ -32,9 +32,12 @@ exports.postLogin = function(req, res) {
 };
 
 // handler for the GET request for logging out a user
+// Passport 0.6+ made req.logout asynchronous — it now takes a callback.
 exports.getLogout = function(req, res) {
-  req.logout();
-  res.redirect('/');
+  req.logout(function(err) {
+    if (err) { console.log(err); }
+    res.redirect('/');
+  });
 };
 
 // handler for the GET request for the about page

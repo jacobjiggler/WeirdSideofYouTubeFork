@@ -10,11 +10,11 @@ var Counter = require('../models/counters.js');
 var database = require('../config/db');
 mongoose.connect(database.url);
 
-Counter.findById('videos', function(err, count) {
-  if (err) return console.error(err);
+async function main() {
+  var count = await Counter.findById('videos');
   console.log('Total videos:', count ? count.seq : 0);
 
-  Video.aggregate([
+  var result = await Video.aggregate([
     {
       $group: {
         _id: null,
@@ -23,14 +23,17 @@ Counter.findById('videos', function(err, count) {
         totalSkips:  { $sum: '$skips' }
       }
     }
-  ], function(err, result) {
-    if (err) return console.error(err);
-    if (result.length) {
-      console.log('Total views:', result[0].totalViews);
-      console.log('Total errors:', result[0].totalErrors);
-      console.log('Total skips:', result[0].totalSkips);
-    }
-    mongoose.connection.close();
-    process.exit(0);
-  });
+  ]);
+  if (result.length) {
+    console.log('Total views:', result[0].totalViews);
+    console.log('Total errors:', result[0].totalErrors);
+    console.log('Total skips:', result[0].totalSkips);
+  }
+  await mongoose.connection.close();
+  process.exit(0);
+}
+
+main().catch(function (err) {
+  console.error(err);
+  process.exit(1);
 });
