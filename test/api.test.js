@@ -198,11 +198,12 @@ describe('getRandomVid', function () {
     VideoHistory.create = function (data) {
       assert.strictEqual(data.username, 'testuser');
       assert.strictEqual(data.videoID, 'abc123');
+      assert.strictEqual(data.userAgent, 'Mozilla/5.0 (TestAgent)');
       historyCalled = true;
       return Promise.resolve();
     };
 
-    var req = makeReq({ session: {}, user: { username: 'testuser' } });
+    var req = makeReq({ session: {}, user: { username: 'testuser' }, headers: { 'user-agent': 'Mozilla/5.0 (TestAgent)' } });
     var res = makeRes();
     res.json = function () {
       assert.ok(historyCalled, 'VideoHistory.create was not called');

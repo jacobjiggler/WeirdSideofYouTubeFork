@@ -126,7 +126,11 @@ exports.getRandomVid = function (req, res)
     req.session.seenVideos.push(doc.videoID);
     if (req.user)
     {
-      VideoHistory.create({ 'username': req.user.username, 'videoID': doc.videoID })
+      VideoHistory.create({
+        'username': req.user.username,
+        'videoID': doc.videoID,
+        'userAgent': (req.headers && req.headers['user-agent']) || ''
+      })
         .catch(function (err) { console.log(err); });
     }
     res.json({ 'vidID': doc.videoID });
@@ -169,7 +173,7 @@ exports.getVideoHistory = async function (req, res)
   }
   try
   {
-    var history = await VideoHistory.find({ username: req.user.username }, { '_id': 0, 'videoID': 1, 'time': 1 }).sort({ time: -1 }).limit(50);
+    var history = await VideoHistory.find({ username: req.user.username }, { '_id': 0, 'videoID': 1, 'time': 1, 'userAgent': 1 }).sort({ time: -1 }).limit(50);
     res.json(history);
   }
   catch (err)

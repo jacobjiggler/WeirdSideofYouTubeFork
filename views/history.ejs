@@ -48,6 +48,7 @@
 	  <td class = "header-cell">Thumbnail</td>
 	  <td class = "header-cell">Title</td>
 	  <td class = "header-cell"> Date</td>
+	  <td class = "header-cell" style="width:280px;">User Agent</td>
  	</tr>
 </table>
 
@@ -62,7 +63,8 @@
           value.videoID + '">' + value.videoID + '</a>'),
 				$('<td class = "data-cell">').html('<img src="//i.ytimg.com/vi/' + value.videoID + '/default.jpg" />'),
 				$('<td class = "data-cell">').attr("id", "title"),
-				$('<td class = "data-cell">').text(value.time)
+				$('<td class = "data-cell">').text(value.time),
+				$('<td class = "data-cell" style="width:280px; white-space:normal; word-break:break-all; font-size:11px !important; line-height:14px !important;">').text(value.userAgent || '—')
 				).appendTo( "#videoTable" );
 				$.getJSON("/api/getVidInfo/" + value.videoID, function(data) {
 					$('#videoTable').find('#'+value.videoID).find('#title').text(data.items[0].snippet.title);

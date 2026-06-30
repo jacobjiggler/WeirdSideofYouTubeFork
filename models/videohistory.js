@@ -4,6 +4,7 @@ var Schema = mongoose.Schema;
 var VideoHistory = new Schema({
   username: String,
   videoID: String,
+  userAgent: String,
   time: {type: Date, default: Date.now},
 }, {
   capped: { size: 10000000 }
