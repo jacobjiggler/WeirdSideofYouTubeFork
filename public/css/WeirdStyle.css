@@ -276,6 +276,18 @@ body {
   background-color: transparent;
 }
 
+/* Hamburger button — hidden on desktop, shown in the mobile media query below */
+.nav-toggle {
+  display: none;
+  background: none;
+  border: 0;
+  color: #ffffff;
+  font-size: 26px;
+  line-height: 1;
+  padding: 12px 16px;
+  cursor: pointer;
+}
+
 #navbar ul {
   list-style: none;
   margin: 0;
@@ -384,6 +396,21 @@ body {
 }
 
 @media screen and (max-width: 768px) {
+  /* Collapse the top nav into a hamburger menu */
+  #navbar {
+    text-align: left;
+    background-color: rgba(35, 35, 40, 0.92);
+  }
+  .nav-toggle {
+    display: inline-block;
+  }
+  #navbar ul {
+    display: none;
+  }
+  #navbar ul.open {
+    display: block;
+    background-color: rgba(35, 35, 40, 0.97);
+  }
   #navbar ul li {
     float: none;
     display: block;
@@ -393,16 +420,57 @@ body {
     -moz-box-sizing: border-box;
     -webkit-box-sizing: border-box;
     box-sizing: border-box;
-    border-bottom: 1px solid #fb998c;
+    padding: 14px 18px;
+    font-size: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   }
   #navbar ul li.last > a,
   #navbar ul li:last-child > a {
     border: 0;
   }
-  #navbar ul li a:after {
-    display: none;
-  }
+  #navbar ul li a:after,
   #navbar ul li a:before {
     display: none;
+  }
+  #navbar ul li p {
+    color: #ffffff;
+    padding: 14px 18px;
+    margin: 0;
+  }
+
+  /* Bigger, readable title — wraps to two lines, crisper rainbow */
+  .titlebox {
+    width: 92%;
+    padding: 12px 14px 18px;
+    margin-top: 8px;
+  }
+  .t1 {
+    font-size: 11vw;
+    line-height: 1.18;
+    text-shadow: 1.5px 0 0 rgb(217,31,38), 3px 0 0 rgb(226,91,14), 4.5px 0 0 rgb(245,221,8), 6px 0 0 rgb(5,148,68), 7.5px 0 0 rgb(2,135,206), 9px 0 0 rgb(4,77,145), 10.5px 0 0 rgb(42,21,113);
+  }
+
+  /* Larger video */
+  #youtube-player-container {
+    width: 96%;
+  }
+  #player-wrapper {
+    max-height: 60vh;
+  }
+
+  /* Next + Share side by side */
+  #playDiv {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .playerbutton {
+    margin: 0;
+  }
+  .playerbutton span {
+    width: auto;
+    padding: 9px 26px;
+    font-size: 18px;
   }
 }

@@ -25,6 +25,7 @@ function playNextVid() {
   fetch('./api/getrandomvid').then(function(response) {
     return response.json();
   }).then(function(vid) {
+    window.currentVidId = vid.vidID;
     player.loadVideoById(vid.vidID);
     player.playVideo();
   }).catch(function(error) {

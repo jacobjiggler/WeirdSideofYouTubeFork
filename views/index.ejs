@@ -30,7 +30,8 @@
 <body>
 
   <div id="navbar">
-    <ul>
+    <button id="navToggle" class="nav-toggle" aria-label="Toggle menu" aria-expanded="false">&#9776;</button>
+    <ul id="navMenu">
       <li><a href="/">Home</a></li>
       <li><a href="/about">About Us</a></li>
       <li><a href="/butwhy">But Why Though?</a></li>
@@ -68,6 +69,9 @@
       <a id="playerbutton" class="playerbutton">
         <span>Next</span>
       </a>
+      <a id="sharebutton" class="playerbutton" role="button" aria-label="Share this video">
+        <span>Share</span>
+      </a>
     </div>
   </div>
 
@@ -77,6 +81,27 @@
       document.getElementById('splash').style.display = 'none';
       document.getElementById('youtube-player-container').style.display = 'block';
       playNextVid();
+    });
+
+    // Hamburger toggle for the mobile nav
+    var navToggle = document.getElementById('navToggle');
+    var navMenu = document.getElementById('navMenu');
+    navToggle.addEventListener('click', function() {
+      var open = navMenu.classList.toggle('open');
+      navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+
+    // Share the current video (native share sheet on mobile, clipboard fallback)
+    document.getElementById('sharebutton').addEventListener('click', function() {
+      var id = window.currentVidId;
+      var url = id ? ('https://www.youtube.com/watch?v=' + id) : 'https://weirdtube.wtf/';
+      if (navigator.share) {
+        navigator.share({ title: 'The Weird Side of YouTube', url: url }).catch(function() {});
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(function() { alert('Link copied: ' + url); });
+      } else {
+        window.prompt('Copy this link:', url);
+      }
     });
   </script>
 
