@@ -17,7 +17,7 @@ services:
       - /app/node_modules    # keep container's node_modules, don't overwrite with host
 
   mongo:
-    image: mongo:4
+    image: mongo:7
     restart: always
     ports:
       - "127.0.0.1:27017:27017"   # loopback only — reachable from this machine (Compass), not the LAN/internet
