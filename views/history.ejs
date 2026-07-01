@@ -4,7 +4,6 @@
 <title>Video History</title>
 <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.2/build/pure-min.css" integrity="sha384-UQiGfs9ICog+LwheBSRCt1o5cbyKIHbwjWscjemyBMT9YCUMZffs6UqUTd0hObXD" crossorigin="anonymous">
 <link rel="stylesheet" type="text/css" href="/css/newstyle.css">
-<script type='text/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js'></script>
 </head>
 
 <body>
@@ -53,24 +52,62 @@
 </table>
 
 <script type="text/javascript">
-	var currentVideoID = 1;
+	// Build the history table with native DOM APIs (no jQuery). Cells use
+	// textContent / encodeURIComponent so nothing is injected as raw HTML, and
+	// the title cell is captured in a closure rather than re-queried by id
+	// (YouTube ids can start with a digit, which breaks '#id' selectors).
+	function loadNewTable() {
+		var table = document.getElementById('videoTable');
+		fetch('/api/gethistory/', { credentials: 'same-origin' })
+			.then(function (res) { return res.json(); })
+			.then(function (videos) {
+				videos.forEach(function (video) {
+					var tr = document.createElement('tr');
+					tr.className = 'videoRow';
 
-	function loadNewTable(){
-		$.getJSON("/api/gethistory/", function(videos) {
-			$.each(videos, function(key, value) {
-				$('<tr id="' + value.videoID + '" class="videoRow">').append(
-          $('<td class = "data-cell">').html('<a href="http://www.youtube.com/watch?v=' +
-          value.videoID + '">' + value.videoID + '</a>'),
-				$('<td class = "data-cell">').html('<img src="//i.ytimg.com/vi/' + value.videoID + '/default.jpg" />'),
-				$('<td class = "data-cell">').attr("id", "title"),
-				$('<td class = "data-cell">').text(value.time),
-				$('<td class = "data-cell" style="width:280px; white-space:normal; word-break:break-all; font-size:11px !important; line-height:14px !important;">').text(value.userAgent || '—')
-				).appendTo( "#videoTable" );
-				$.getJSON("/api/getVidInfo/" + value.videoID, function(data) {
-					$('#videoTable').find('#'+value.videoID).find('#title').text(data.items[0].snippet.title);
+					var linkTd = document.createElement('td');
+					linkTd.className = 'data-cell';
+					var a = document.createElement('a');
+					a.href = 'https://www.youtube.com/watch?v=' + encodeURIComponent(video.videoID);
+					a.textContent = video.videoID;
+					linkTd.appendChild(a);
+					tr.appendChild(linkTd);
+
+					var thumbTd = document.createElement('td');
+					thumbTd.className = 'data-cell';
+					var img = document.createElement('img');
+					img.src = 'https://i.ytimg.com/vi/' + encodeURIComponent(video.videoID) + '/default.jpg';
+					thumbTd.appendChild(img);
+					tr.appendChild(thumbTd);
+
+					var titleTd = document.createElement('td');
+					titleTd.className = 'data-cell';
+					tr.appendChild(titleTd);
+
+					var dateTd = document.createElement('td');
+					dateTd.className = 'data-cell';
+					dateTd.textContent = video.time;
+					tr.appendChild(dateTd);
+
+					var uaTd = document.createElement('td');
+					uaTd.className = 'data-cell';
+					uaTd.style.cssText = 'width:280px; white-space:normal; word-break:break-all; font-size:11px !important; line-height:14px !important;';
+					uaTd.textContent = video.userAgent || '—';
+					tr.appendChild(uaTd);
+
+					table.appendChild(tr);
+
+					fetch('/api/getVidInfo/' + encodeURIComponent(video.videoID))
+						.then(function (res) { return res.json(); })
+						.then(function (data) {
+							if (data.items && data.items[0]) {
+								titleTd.textContent = data.items[0].snippet.title;
+							}
+						})
+						.catch(function () {});
 				});
-			});
-		});
+			})
+			.catch(function (error) { console.error(error); });
 	}
 
 	loadNewTable();
