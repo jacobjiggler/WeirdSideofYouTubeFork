@@ -119,7 +119,7 @@ describe('config/csrf', function () {
     var setCookies = [];
     var req = { headers: {}, cookies: {}, body: {} };
     var res = {
-      cookie: function (name, val) { setCookies.push(name); return res; },
+      cookie: function (name, _val) { setCookies.push(name); return res; },
       getHeader: function () { return undefined; },
       setHeader: function () {},
       append: function () {}

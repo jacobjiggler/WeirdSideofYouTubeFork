@@ -5,7 +5,8 @@
   "main": "app.js",
   "scripts": {
     "start": "webpack && node app.js ",
-    "test": "node_modules/.bin/mocha test/**/*.test.js --timeout 5000"
+    "test": "node_modules/.bin/mocha test/**/*.test.js --timeout 5000",
+    "lint": "eslint ."
   },
   "repository": {
     "type": "git",
@@ -34,7 +35,9 @@
   },
   "private": true,
   "devDependencies": {
-    "eslint": "^3.16.1",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.6.0",
+    "globals": "^17.7.0",
     "mocha": "^10.8.2",
     "webpack": "^5.108.3",
     "webpack-cli": "^7.1.0"

@@ -1,12 +1,9 @@
 // Invoke 'strict' JavaScript mode
 'use strict';
 
-var mongoose = require('mongoose');
 var Video = require('../models/video');
 var Counter = require('../models/counters');
 var VideoHistory = require('../models/videohistory');
-var Chance = require('chance');
-var chance = new Chance();
 var BannedVideo = require('../models/bannedvideo');
 
 // internal function for adding a video to the database.
@@ -17,7 +14,7 @@ var BannedVideo = require('../models/bannedvideo');
 // distinguish "added" from "skipped" by checking for .videoID).
 exports.addVideo = async function (video_url_or_id, callback)
 {
-  var video_split = video_url_or_id.match(/(?:https?:\/{2})?(?:w{3}\.)?youtu(?:be)?\.(?:com|be)(?:\/watch\?v=|\/)([^\s&\?]+)/);
+  var video_split = video_url_or_id.match(/(?:https?:\/{2})?(?:w{3}\.)?youtu(?:be)?\.(?:com|be)(?:\/watch\?v=|\/)([^\s&?]+)/);
   var vidID = video_url_or_id;
   if(video_url_or_id != null && video_split != null)
   {
@@ -77,7 +74,7 @@ exports.removeVideoNoParse = async function (vidID)
 // internal function for removing a video by youtube ID
 exports.removeVideo = function (video_url_or_id)
 {
-  var video_split = video_url_or_id.match(/(?:https?:\/{2})?(?:w{3}\.)?youtu(?:be)?\.(?:com|be)(?:\/watch\?v=|\/)([^\s&\?]+)/);
+  var video_split = video_url_or_id.match(/(?:https?:\/{2})?(?:w{3}\.)?youtu(?:be)?\.(?:com|be)(?:\/watch\?v=|\/)([^\s&?]+)/);
   var vidID = video_url_or_id;
   if(video_url_or_id != null && video_split != null)
   {
