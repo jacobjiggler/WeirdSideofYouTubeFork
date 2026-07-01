@@ -8,6 +8,7 @@ var LocalStrategy = require('passport-local').Strategy;
 // express middleware
 var logger = require('morgan');
 var session = require('express-session');
+var MongoStore = require('connect-mongo').default;
 var bodyParser = require('body-parser');
 var cookieParser = require('cookie-parser');
 var errorHandler = require('errorhandler');
@@ -43,10 +44,19 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   secret: process.env.SESSION_SECRET || 'sessionsecret',
+  // Persist sessions in MongoDB instead of the default in-memory MemoryStore, so
+  // logins survive app restarts/deploys (MemoryStore is wiped on every restart)
+  // and memory doesn't leak in production.
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URI || 'mongodb://127.0.0.1/weirdtube',
+    collectionName: 'sessions',
+    ttl: 7 * 24 * 60 * 60          // server-side session lifetime: 7 days (seconds)
+  }),
   cookie: {
     httpOnly: true,
     sameSite: 'lax',
-    secure: env === 'production'   // require HTTPS in production (served via Cloudflare)
+    secure: env === 'production',  // require HTTPS in production (served via Cloudflare)
+    maxAge: 7 * 24 * 60 * 60 * 1000 // keep the login cookie for 7 days (survives restarts + browser close)
   }
 }));
 app.use(passport.initialize());
