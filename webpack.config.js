@@ -1,15 +1,16 @@
+var path = require('path');
+
+// Bundles the browser entry points into dist/. Native fetch is used directly
+// (no whatwg-fetch polyfill — the site targets modern browsers), and no CSS is
+// imported through JS, so no loaders are needed — webpack just bundles.
 module.exports = {
+  mode: 'production',
   entry: {
-    videos: ['whatwg-fetch', './frontend/videos.js'],
-    admin: ['whatwg-fetch', './frontend/admin.js']
+    videos: './frontend/videos.js',
+    admin: './frontend/admin.js'
   },
   output: {
-    path: __dirname + '/dist/',
+    path: path.resolve(__dirname, 'dist'),
     filename: '[name].js'
-  },
-  module: {
-    loaders: [
-        { test: /\.css$/, loader: 'style!css' }
-    ]
   }
 };
