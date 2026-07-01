@@ -3,8 +3,41 @@
 
 var Video = require('../models/video');
 var Counter = require('../models/counters');
+var Submission = require('../models/submission');
 var api = require('./api');
 var reddit = require('./reddit');
+
+// Promise wrapper around the callback-based api.addVideo.
+function addVideoPromise(idOrUrl) {
+  return new Promise(function (resolve, reject) {
+    api.addVideo(idOrUrl, function (err, vid) {
+      if (err) reject(err); else resolve(vid);
+    });
+  });
+}
+
+// Expand a playlist into individual videos via the YouTube API and add each.
+// Capped at 4 pages (200 videos) to bound abuse from a huge playlist.
+async function addPlaylist(playlistId) {
+  var key = process.env.YOUTUBE_API_KEY;
+  if (!key) throw new Error('YOUTUBE_API_KEY is not set');
+  var added = 0, pageToken = '', pages = 0;
+  do {
+    var url = 'https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&maxResults=50&playlistId=' +
+      encodeURIComponent(playlistId) + '&key=' + key + (pageToken ? '&pageToken=' + encodeURIComponent(pageToken) : '');
+    var resp = await fetch(url);
+    if (!resp.ok) break;
+    var data = await resp.json();
+    var items = data.items || [];
+    for (var i = 0; i < items.length; i++) {
+      var vidId = items[i].contentDetails && items[i].contentDetails.videoId;
+      if (vidId) { await addVideoPromise(vidId); added++; }
+    }
+    pageToken = data.nextPageToken || '';
+    pages++;
+  } while (pageToken && pages < 4);
+  return added;
+}
 
 //middleware for requiring admin permissions
 exports.needsAdmin = function(req, res, next) {
@@ -74,4 +107,58 @@ exports.getVidRangeAdmin = async function(req, res) {
 exports.postCrawlReddit = function(req, res) {
   reddit.crawlReddit();
   res.redirect('/admin');
+};
+
+// ── Public-submission moderation ──────────────────────────────────────────────
+
+// Render the moderation queue: pending submissions + recent decisions.
+exports.getSubmissions = async function (req, res) {
+  try {
+    var pending = await Submission.find({ status: 'pending' }).sort({ time: -1 }).limit(200).lean();
+    var recent = await Submission.find({ status: { $in: ['approved', 'rejected'] } }).sort({ time: -1 }).limit(20).lean();
+    res.render('admin/submissions', {
+      user: req.user,
+      csrfToken: req.csrfToken(),
+      pending: pending,
+      recent: recent
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error loading submissions');
+  }
+};
+
+// Approve a pending submission: add the video, or expand + add the playlist.
+exports.postApproveSubmission = async function (req, res) {
+  try {
+    var id = String((req.body && req.body.id) || '');
+    var sub = await Submission.findById(id);
+    if (sub && sub.status === 'pending') {
+      var result;
+      if (sub.type === 'video') {
+        await addVideoPromise(sub.sourceId);
+        result = 'added video ' + sub.sourceId;
+      } else {
+        var count = await addPlaylist(sub.sourceId);
+        result = 'added ' + count + ' video(s) from playlist';
+      }
+      sub.status = 'approved';
+      sub.note = result;
+      await sub.save();
+    }
+  } catch (err) {
+    console.error(err);
+  }
+  res.redirect('/admin/submissions');
+};
+
+// Reject a pending submission (kept for the audit trail, not deleted).
+exports.postRejectSubmission = async function (req, res) {
+  try {
+    var id = String((req.body && req.body.id) || '');
+    await Submission.updateOne({ _id: id, status: 'pending' }, { $set: { status: 'rejected', note: 'rejected by admin' } });
+  } catch (err) {
+    console.error(err);
+  }
+  res.redirect('/admin/submissions');
 };

@@ -11,5 +11,8 @@ router.post('/submit', csrf.csrfProtection, admin.postSubmitVid);
 router.post('/remove', csrf.csrfProtection, admin.postRemoveVid);
 router.get('/getvidrange/:start/:end', admin.getVidRangeAdmin);
 router.get('/crawlreddit', admin.postCrawlReddit);
+router.get('/submissions', csrf.attachToken, admin.getSubmissions);
+router.post('/submissions/approve', csrf.csrfProtection, admin.postApproveSubmission);
+router.post('/submissions/reject', csrf.csrfProtection, admin.postRejectSubmission);
 
 module.exports = router;

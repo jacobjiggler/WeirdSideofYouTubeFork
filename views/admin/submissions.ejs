@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="csrf-token" content="<%= csrfToken %>">
+  <title>Submissions — Admin</title>
+  <link rel="stylesheet" href="/css/pure-min.css">
+  <link rel="stylesheet" type="text/css" href="/css/newstyle.css">
+</head>
+<body>
+
+  <div class="custom-menu-wrapper">
+    <div class="pure-menu custom-menu">
+      <a href="/" class="pure-menu-heading custom-menu-brand"> Home</a>
+      <a href="#" class="custom-menu-toggle" id="toggle"><s class="bar"></s><s class="bar"></s></a>
+    </div>
+    <div class="pure-menu pure-menu-horizontal pure-menu-scrollable custom-menu custom-menu-bottom custom-menu-tucked" id="tuckedMenu">
+      <div class="custom-menu-screen"></div>
+      <ul class="pure-menu-list">
+        <li class="pure-menu-item"><a href="/admin" class="pure-menu-link">Admin Panel</a></li>
+        <li class="pure-menu-item"><a href="/admin/submissions" class="pure-menu-link">Submissions</a></li>
+        <li class="pure-menu-item"><a href="/history" class="pure-menu-link">View History</a></li>
+        <li class="pure-menu-item"><a href="/logout" class="pure-menu-link">Logout</a></li>
+      </ul>
+    </div>
+  </div>
+  <script>
+  (function (window, document) {
+    document.getElementById('toggle').addEventListener('click', function () {
+      document.getElementById('tuckedMenu').classList.toggle('custom-menu-tucked');
+      document.getElementById('toggle').classList.toggle('x');
+    });
+  })(this, this.document);
+  </script>
+
+  <div id="title" style="margin-top:16px;"><h1>Pending submissions (<%= pending.length %>)</h1></div>
+
+  <% if (pending.length === 0) { %>
+    <div id="textbody"><p>Nothing waiting for review.</p></div>
+  <% } else { %>
+  <table cellspacing="5">
+    <tr>
+      <td class="header-cell">Type</td>
+      <td class="header-cell">Link</td>
+      <td class="header-cell">When</td>
+      <td class="header-cell" style="width:280px;">User Agent</td>
+      <td class="header-cell">Actions</td>
+    </tr>
+    <% pending.forEach(function (s) { var url = s.type === 'playlist' ? ('https://www.youtube.com/playlist?list=' + s.sourceId) : ('https://www.youtube.com/watch?v=' + s.sourceId); %>
+    <tr>
+      <td class="data-cell"><%= s.type %></td>
+      <td class="data-cell"><a href="<%= url %>" target="_blank" rel="noopener noreferrer" style="color:#8ec7ff;"><%= s.sourceId %></a></td>
+      <td class="data-cell" style="font-size:13px;"><%= new Date(s.time).toLocaleString() %></td>
+      <td class="data-cell" style="width:280px; white-space:normal; word-break:break-all; font-size:11px; line-height:14px;"><%= s.userAgent || '—' %></td>
+      <td class="data-cell">
+        <form action="/admin/submissions/approve" method="post" style="display:inline;">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="id" value="<%= s._id %>">
+          <button type="submit" style="background:#2e7d32; color:#fff; border:0; padding:6px 10px; border-radius:4px; cursor:pointer;">Approve</button>
+        </form>
+        <form action="/admin/submissions/reject" method="post" style="display:inline;">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="id" value="<%= s._id %>">
+          <button type="submit" style="background:#8a1f1f; color:#fff; border:0; padding:6px 10px; border-radius:4px; cursor:pointer;">Reject</button>
+        </form>
+      </td>
+    </tr>
+    <% }); %>
+  </table>
+  <% } %>
+
+  <% if (recent && recent.length) { %>
+    <div id="title" style="margin-top:24px;"><h2>Recent decisions</h2></div>
+    <table cellspacing="5">
+      <tr>
+        <td class="header-cell">Status</td>
+        <td class="header-cell">Type</td>
+        <td class="header-cell">Source</td>
+        <td class="header-cell">Result</td>
+      </tr>
+      <% recent.forEach(function (s) { %>
+      <tr>
+        <td class="data-cell"><%= s.status %></td>
+        <td class="data-cell"><%= s.type %></td>
+        <td class="data-cell" style="font-size:12px; word-break:break-all;"><%= s.sourceId %></td>
+        <td class="data-cell" style="font-size:12px;"><%= s.note || '' %></td>
+      </tr>
+      <% }); %>
+    </table>
+  <% } %>
+
+</body>
+</html>
