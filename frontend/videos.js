@@ -33,7 +33,18 @@ function playNextVid() {
   });
 }
 
+// Play one specific video first (used by shared /?v=<id> deep links). When it
+// ends or errors, the stateChange/error handlers fall through to playNextVid,
+// so playback continues randomly after the shared video.
+function playSpecificVid(id) {
+  if (!player) initPlayer();
+  window.currentVidId = id;
+  player.loadVideoById(id);
+  player.playVideo();
+}
+
 window.playNextVid = playNextVid;
+window.playSpecificVid = playSpecificVid;
 
 document.addEventListener('DOMContentLoaded', function() {
   var btn = document.getElementById('playerbutton');

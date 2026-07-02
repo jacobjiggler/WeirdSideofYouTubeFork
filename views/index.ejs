@@ -70,8 +70,14 @@
       <a id="playerbutton" class="playerbutton">
         <span>Next</span>
       </a>
-      <a id="sharebutton" class="playerbutton" role="button" aria-label="Share this video">
-        <span>Share</span>
+      <a id="sharebutton" class="playerbutton sharebtn" role="button" aria-label="Share this video" title="Share this video">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="18" cy="5" r="3"></circle>
+          <circle cx="6" cy="12" r="3"></circle>
+          <circle cx="18" cy="19" r="3"></circle>
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+        </svg>
       </a>
     </div>
   </div>
@@ -88,11 +94,25 @@
 
   <script type="text/javascript" src="videos.js"></script>
   <script>
-    document.getElementById('gobutton').addEventListener('click', function() {
+    function startPlayer() {
       document.getElementById('splash').style.display = 'none';
       document.getElementById('youtube-player-container').style.display = 'block';
+    }
+
+    document.getElementById('gobutton').addEventListener('click', function() {
+      startPlayer();
       playNextVid();
     });
+
+    // Shared deep link (/?v=VIDEOID): skip the splash and play that video first.
+    // An invalid id just errors in the player and falls through to a random one.
+    (function() {
+      var v = new URLSearchParams(window.location.search).get('v');
+      if (v && /^[A-Za-z0-9_-]{11}$/.test(v)) {
+        startPlayer();
+        playSpecificVid(v);
+      }
+    })();
 
     // Hamburger toggle for the mobile nav
     var navToggle = document.getElementById('navToggle');
@@ -102,10 +122,11 @@
       navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
 
-    // Share the current video (native share sheet on mobile, clipboard fallback)
+    // Share the current video as a weirdtube deep link that replays it first
+    // (native share sheet on mobile, clipboard fallback).
     document.getElementById('sharebutton').addEventListener('click', function() {
       var id = window.currentVidId;
-      var url = id ? ('https://www.youtube.com/watch?v=' + id) : 'https://weirdtube.wtf/';
+      var url = id ? ('https://weirdtube.wtf/?v=' + id) : 'https://weirdtube.wtf/';
       if (navigator.share) {
         navigator.share({ title: 'The Weird Side of YouTube', url: url }).catch(function() {});
       } else if (navigator.clipboard) {

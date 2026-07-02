@@ -129,6 +129,25 @@ body {
     width: 10%;
 }
 
+/* Compact icon-only share button that sits next to Next */
+.playerbutton.sharebtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  width: 56px;
+  height: 56px;
+  box-sizing: border-box;
+  vertical-align: middle;
+  color: #ffffff;
+}
+
+.playerbutton.sharebtn svg {
+  width: 26px;
+  height: 26px;
+  display: block;
+}
+
 .playerbutton:hover,
 .playerbutton.hover {
   background: #3cb0fd;
