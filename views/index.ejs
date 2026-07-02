@@ -122,17 +122,46 @@
       navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
 
-    // Share the current video as a weirdtube deep link that replays it first
-    // (native share sheet on mobile, clipboard fallback).
+    // Mobile: open the native share sheet. Desktop: copy the link to clipboard.
+    function isMobileDevice() {
+      if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') {
+        return navigator.userAgentData.mobile;
+      }
+      var ua = navigator.userAgent;
+      // iPadOS 13+ reports as desktop Safari; catch real touch iPads too.
+      var iPadOS = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+      return /Android|iPhone|iPod|Opera Mini|IEMobile|Mobile/i.test(ua) || iPadOS;
+    }
+
+    function flashCopied(anchorEl) {
+      var tip = document.createElement('div');
+      tip.textContent = 'Link copied!';
+      tip.style.cssText = 'position:absolute; background:#111; color:#fff; padding:4px 8px; border-radius:4px; font:12px Arial, sans-serif; white-space:nowrap; z-index:9999; transform:translate(-50%,-100%); pointer-events:none;';
+      var r = anchorEl.getBoundingClientRect();
+      tip.style.left = (r.left + r.width / 2 + window.scrollX) + 'px';
+      tip.style.top = (r.top + window.scrollY - 6) + 'px';
+      document.body.appendChild(tip);
+      setTimeout(function() { if (tip.parentNode) tip.parentNode.removeChild(tip); }, 1300);
+    }
+
+    function copyLink(url, anchorEl) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(
+          function() { flashCopied(anchorEl); },
+          function() { window.prompt('Copy this link:', url); }
+        );
+      } else {
+        window.prompt('Copy this link:', url);
+      }
+    }
+
     document.getElementById('sharebutton').addEventListener('click', function() {
       var id = window.currentVidId;
       var url = id ? ('https://weirdtube.wtf/?v=' + id) : 'https://weirdtube.wtf/';
-      if (navigator.share) {
+      if (isMobileDevice() && navigator.share) {
         navigator.share({ title: 'The Weird Side of YouTube', url: url }).catch(function() {});
-      } else if (navigator.clipboard) {
-        navigator.clipboard.writeText(url).then(function() { alert('Link copied: ' + url); });
       } else {
-        window.prompt('Copy this link:', url);
+        copyLink(url, this);
       }
     });
   </script>
