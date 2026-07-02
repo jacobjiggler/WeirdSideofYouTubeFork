@@ -3,7 +3,7 @@ services:
     build: .
     restart: always
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"   # loopback only — reached by cloudflared on this host, not the LAN/Tailscale/internet
     environment:
       - NODE_ENV=production
       - MONGO_URI=mongodb://mongo:27017/weirdtube
