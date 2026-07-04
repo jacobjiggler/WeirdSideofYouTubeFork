@@ -1,23 +1,28 @@
 // dependencies
-var express = require('express');
-var path = require('path');
-var mongoose = require('mongoose');
-var passport = require('passport');
-var LocalStrategy = require('passport-local').Strategy;
+import express, { type ErrorRequestHandler } from 'express';
+import path from 'path';
+import mongoose from 'mongoose';
+import passport from 'passport';
+import { Strategy as LocalStrategy } from 'passport-local';
 
 // express middleware
-var logger = require('morgan');
-var session = require('express-session');
-var MongoStore = require('connect-mongo').default;
-var bodyParser = require('body-parser');
-var cookieParser = require('cookie-parser');
-var errorHandler = require('errorhandler');
-var helmet = require('helmet');
-var rateLimit = require('express-rate-limit').rateLimit;
+import logger from 'morgan';
+import session from 'express-session';
+import MongoStore from 'connect-mongo';
+import bodyParser from 'body-parser';
+import cookieParser from 'cookie-parser';
+import errorHandler from 'errorhandler';
+import helmet from 'helmet';
+import { rateLimit } from 'express-rate-limit';
+
+// app modules (still JavaScript — typed as `any` until migrated)
+import Account from './models/account';
+import database from './config/db';
+import setupRouter from './router';
 
 // global config
-var app = express();
-var env = process.env.NODE_ENV || 'development';
+const app = express();
+const env = process.env.NODE_ENV || 'development';
 app.set('port', process.env.PORT || 3000);
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
@@ -29,8 +34,7 @@ app.set('view options', { layout: false });
 app.set('trust proxy', 1);
 
 // Security headers. CSP and COEP are disabled because the site loads third-party
-// assets (PureCSS/jQuery CDNs, Google Fonts, the YouTube IFrame player) and uses
-// inline scripts; a proper CSP can be added later as part of modernization.
+// assets (CDN fonts, the YouTube IFrame player) and uses inline scripts.
 app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false
@@ -45,8 +49,7 @@ app.use(session({
   saveUninitialized: false,
   secret: process.env.SESSION_SECRET || 'sessionsecret',
   // Persist sessions in MongoDB instead of the default in-memory MemoryStore, so
-  // logins survive app restarts/deploys (MemoryStore is wiped on every restart)
-  // and memory doesn't leak in production.
+  // logins survive app restarts/deploys and memory doesn't leak in production.
   store: MongoStore.create({
     mongoUrl: process.env.MONGO_URI || 'mongodb://127.0.0.1/weirdtube',
     collectionName: 'sessions',
@@ -56,7 +59,7 @@ app.use(session({
     httpOnly: true,
     sameSite: 'lax',
     secure: env === 'production',  // require HTTPS in production (served via Cloudflare)
-    maxAge: 7 * 24 * 60 * 60 * 1000 // keep the login cookie for 7 days (survives restarts + browser close)
+    maxAge: 7 * 24 * 60 * 60 * 1000 // keep the login cookie for 7 days
   }
 }));
 app.use(passport.initialize());
@@ -64,9 +67,8 @@ app.use(passport.session());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// Rate limiting. Protects login from brute force and the API (which proxies the
-// YouTube quota) from abuse.
-var apiLimiter = rateLimit({
+// Rate limiting. Protects login from brute force and the API from abuse.
+const apiLimiter = rateLimit({
   windowMs: 60 * 1000,   // 1 minute
   max: 60,
   standardHeaders: true,
@@ -74,34 +76,36 @@ var apiLimiter = rateLimit({
 });
 app.use('/api', apiLimiter);
 
-// env config — dev-only verbose error pages with stack traces.
-// In production we deliberately install no errorhandler here, so Express's
-// default handler returns a generic 500 with no stack leak.
-if ('development' == env) {
-  app.use(errorHandler({ dumpExceptions: true, showStack: true }));
+// Dev-only verbose error pages with stack traces. In production we install no
+// errorhandler here, so Express's default handler returns a generic 500.
+// (The old dumpExceptions/showStack options were legacy Connect options that the
+// modern `errorhandler` package ignores — its dev output is verbose by default.)
+if (env === 'development') {
+  app.use(errorHandler());
 }
 
 // passport config
-var Account = require('./models/account');
 passport.use(new LocalStrategy(Account.authenticate()));
 passport.serializeUser(Account.serializeUser());
 passport.deserializeUser(Account.deserializeUser());
 
 // mongoose
-var database = require('./config/db');
 mongoose.connect(database.url);
 
 // routes
-require('./router')(app);
+setupRouter(app);
 
 // CSRF error handler — invalid/missing token yields a clean 403 instead of a 500.
-app.use(function (err, req, res, next) {
+const csrfErrorHandler: ErrorRequestHandler = (err, _req, res, next) => {
   if (err && err.code === 'EBADCSRFTOKEN') {
-    return res.status(403).send('Form expired or invalid (CSRF). Go back and try again.');
+    res.status(403).send('Form expired or invalid (CSRF). Go back and try again.');
+    return;
   }
-  return next(err);
-});
+  next(err);
+};
+app.use(csrfErrorHandler);
 
-app.listen(app.get('port'), function(){
-  console.log(('Express server listening on port ' + app.get('port')));
+const port = app.get('port');
+app.listen(port, () => {
+  console.log('Express server listening on port ' + port);
 });

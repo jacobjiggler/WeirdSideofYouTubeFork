@@ -2,11 +2,12 @@
   "name": "weird-side-of-youtube",
   "version": "0.0.1",
   "description": "A site to view weird YouTube videos",
-  "main": "app.js",
+  "main": "app.ts",
   "scripts": {
-    "start": "webpack && node app.js ",
+    "start": "webpack && tsx app.ts",
     "test": "node_modules/.bin/mocha test/**/*.test.js --timeout 5000",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
   },
   "repository": {
     "type": "git",
@@ -32,14 +33,24 @@
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
     "passport-local-mongoose": "^8.0.0",
+    "tsx": "^4.23.0",
     "youtube-player": "^4.2.2"
   },
   "private": true,
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/errorhandler": "^1.5.3",
+    "@types/express": "^5.0.6",
+    "@types/express-session": "^1.19.0",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^26.1.0",
+    "@types/passport": "^1.0.17",
+    "@types/passport-local": "^1.0.38",
     "eslint": "^10.6.0",
     "globals": "^17.7.0",
     "mocha": "^10.8.2",
+    "typescript": "^6.0.3",
     "webpack": "^5.108.3",
     "webpack-cli": "^7.1.0"
   }
