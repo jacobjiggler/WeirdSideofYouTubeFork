@@ -11,8 +11,9 @@ COPY . .
 
 # Run as the built-in non-root 'node' user. Defense-in-depth: a compromised app
 # doesn't get root in the container, nor root-level write access to the mounted
-# source on the host.
-RUN chown -R node:node /app
+# source on the host. Pre-create dist/ so the anonymous volume mounted there
+# (see docker-compose) inherits node ownership and webpack can write the bundle.
+RUN mkdir -p /app/dist && chown -R node:node /app
 USER node
 
 EXPOSE 3000

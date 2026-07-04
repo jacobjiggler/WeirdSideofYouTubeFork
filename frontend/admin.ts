@@ -1,44 +1,43 @@
-var escape = require('escape-html');
-var ready = require('./ready');
+import escape from 'escape-html';
+import ready from './ready';
 
 var currentVideoID = 1;
 var numVideos = 0;
 var videosPerPage = 50;
 
 // CSRF token rendered into the admin page; required on every state-changing POST.
-function getCsrfToken() {
+function getCsrfToken(): string {
   var meta = document.querySelector('meta[name="csrf-token"]');
-  return meta ? meta.getAttribute('content') : '';
+  return meta ? (meta.getAttribute('content') || '') : '';
 }
 
-function loadNewTable() {
-  var endRange = (currentVideoID+videosPerPage <= numVideos) ? currentVideoID+videosPerPage : numVideos;
+function loadNewTable(): void {
+  var endRange = (currentVideoID + videosPerPage <= numVideos) ? currentVideoID + videosPerPage : numVideos;
   var rangeTxt = 'Showing videos ' + currentVideoID + ' through ' + endRange + ' of ' + numVideos;
-  document.getElementById('vidRange').innerText = rangeTxt;
+  (document.getElementById('vidRange') as HTMLElement).innerText = rangeTxt;
 
-  var vidTable = document.getElementById('videoTable');
+  var vidTable = document.getElementById('videoTable') as HTMLElement;
   var rows = vidTable.querySelectorAll('tr');
-  for(var i = 0; i < rows.length; ++i) {
-    if(/videoRow/.test(rows[i].className)) {
+  for (var i = 0; i < rows.length; ++i) {
+    if (/videoRow/.test(rows[i].className)) {
       vidTable.removeChild(rows[i]);
     }
   }
 
-  fetch('/admin/getvidrange/' + currentVideoID + '/' + (currentVideoID + 49), {credentials: 'same-origin'}).then(function(response) {
-    console.log(response);
+  fetch('/admin/getvidrange/' + currentVideoID + '/' + (currentVideoID + 49), { credentials: 'same-origin' }).then(function (response) {
     return response.json();
-  }).then(function(vids) {
-    for(var key in vids) {
+  }).then(function (vids: any) {
+    for (var key in vids) {
       var val = vids[key];
       var dom = generateNewEntry(val);
-      document.getElementById('videoTable').appendChild(dom);
+      (document.getElementById('videoTable') as HTMLElement).appendChild(dom);
     }
-  }).catch(function(error) {
+  }).catch(function (error: any) {
     console.error(error);
   });
 }
 
-function generateNewEntry(video) {
+function generateNewEntry(video: any): HTMLElement {
   var tr = document.createElement('tr');
   tr.setAttribute('id', 'vid' + escape(video.videoID));
   tr.setAttribute('class', 'videoRow');
@@ -79,45 +78,44 @@ function generateNewEntry(video) {
   tr.insertAdjacentHTML('beforeEnd', '<td class = "data-cell"><img src="//i.ytimg.com/vi/' + encodeURIComponent(video.videoID) + '/default.jpg" /></td>');
   tr.insertAdjacentHTML('beforeEnd', '<td class = "data-cell" id="title"></td>');
   tr.insertAdjacentHTML('beforeEnd', '<td class = "data-cell">' + escape(video.views) + '</td>');
-  tr.insertAdjacentHTML('beforeEnd', '<td class = "data-cell">' + escape(video.skips/video.views * 100) + '%</td>');
-  tr.insertAdjacentHTML('beforeEnd', '<td class = "data-cell">' + escape(video.errorCount/video.views * 100) + '%</td>');
+  tr.insertAdjacentHTML('beforeEnd', '<td class = "data-cell">' + escape(video.skips / video.views * 100) + '%</td>');
+  tr.insertAdjacentHTML('beforeEnd', '<td class = "data-cell">' + escape(video.errorCount / video.views * 100) + '%</td>');
 
-  fetch('/api/getVidInfo/' + encodeURIComponent(video.videoID)).then(function(response) {
+  fetch('/api/getVidInfo/' + encodeURIComponent(video.videoID)).then(function (response) {
     return response.json();
-  }).then(function(data) {
-    document.querySelector('#videoTable #vid' + escape(video.videoID) + ' #title').innerText = data.items[0].snippet.title;
+  }).then(function (data: any) {
+    (document.querySelector('#videoTable #vid' + escape(video.videoID) + ' #title') as HTMLElement).innerText = data.items[0].snippet.title;
   });
 
   return tr;
 }
 
-ready(function() {
+ready(function () {
   loadNewTable();
 
-  fetch('/api/getnumvids/').then(function(response) {
+  fetch('/api/getnumvids/').then(function (response) {
     return response.json();
-  }).then(function(data) {
+  }).then(function (data: any) {
     numVideos = data.numVids;
-    document.getElementById('vidRange').innerText = 'Showing videos ' +
+    (document.getElementById('vidRange') as HTMLElement).innerText = 'Showing videos ' +
       currentVideoID + ' through ' +
-      ((currentVideoID+videosPerPage <= numVideos) ?
-        currentVideoID+videosPerPage : numVideos) +
+      ((currentVideoID + videosPerPage <= numVideos) ? currentVideoID + videosPerPage : numVideos) +
       ' of ' + numVideos;
   });
 
-  var nxtPage = function() {
+  var nxtPage = function () {
     currentVideoID += videosPerPage;
-    if(currentVideoID > numVideos) currentVideoID -= videosPerPage;
+    if (currentVideoID > numVideos) currentVideoID -= videosPerPage;
     loadNewTable();
   };
-  document.getElementById('nextButtonTop').onclick = nxtPage;
-  document.getElementById('nextButtonBottom').onclick = nxtPage;
+  (document.getElementById('nextButtonTop') as HTMLElement).onclick = nxtPage;
+  (document.getElementById('nextButtonBottom') as HTMLElement).onclick = nxtPage;
 
-  var prvPage = function() {
+  var prvPage = function () {
     currentVideoID -= videosPerPage;
-    if(currentVideoID < 1) currentVideoID = 1;
+    if (currentVideoID < 1) currentVideoID = 1;
     loadNewTable();
   };
-  document.getElementById('previousButtonTop').onclick = prvPage;
-  document.getElementById('previousButtonBottom').onclick = prvPage;
+  (document.getElementById('previousButtonTop') as HTMLElement).onclick = prvPage;
+  (document.getElementById('previousButtonBottom') as HTMLElement).onclick = prvPage;
 });

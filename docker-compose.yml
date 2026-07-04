@@ -17,6 +17,7 @@ services:
     volumes:
       - .:/app               # mount source so edits reflect without rebuild
       - /app/node_modules    # keep container's node_modules, don't overwrite with host
+      - /app/dist            # webpack build output (node-owned volume, not the host bind mount)
     logging:                 # cap stdout/stderr logs so they can't fill the disk
       driver: json-file
       options:

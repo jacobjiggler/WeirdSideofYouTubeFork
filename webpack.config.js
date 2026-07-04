@@ -1,16 +1,28 @@
 var path = require('path');
 
-// Bundles the browser entry points into dist/. Native fetch is used directly
-// (no whatwg-fetch polyfill — the site targets modern browsers), and no CSS is
-// imported through JS, so no loaders are needed — webpack just bundles.
+// Bundles the browser entry points (TypeScript) into dist/. esbuild-loader
+// transpiles the .ts sources (fast, no type-checking — same philosophy as tsx on
+// the server). No CSS is imported through JS, so no other loaders are needed.
 module.exports = {
   mode: 'production',
   entry: {
-    videos: './frontend/videos.js',
-    admin: './frontend/admin.js'
+    videos: './frontend/videos.ts',
+    admin: './frontend/admin.ts'
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: '[name].js'
+  },
+  resolve: {
+    extensions: ['.ts', '.js']
+  },
+  module: {
+    rules: [
+      {
+        test: /\.ts$/,
+        loader: 'esbuild-loader',
+        options: { target: 'es2018' }
+      }
+    ]
   }
 };
