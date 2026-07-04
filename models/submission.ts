@@ -1,8 +1,7 @@
-var mongoose = require('mongoose');
-var Schema = mongoose.Schema;
+import { Schema, model } from 'mongoose';
 
 // A public video/playlist suggestion awaiting admin moderation.
-var Submission = new Schema({
+const Submission = new Schema({
   type:        { type: String, enum: ['video', 'playlist'], required: true },
   sourceId:    { type: String, required: true },   // the extracted YouTube video id or playlist id
   originalUrl: { type: String },                   // what the submitter pasted (stored for context)
@@ -15,4 +14,4 @@ var Submission = new Schema({
 
 Submission.index({ status: 1, time: -1 });
 
-module.exports = mongoose.model('Submission', Submission);
+export = model('Submission', Submission);

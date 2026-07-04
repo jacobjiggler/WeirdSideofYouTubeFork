@@ -84,10 +84,16 @@ if (env === 'development') {
   app.use(errorHandler());
 }
 
-// passport config
-passport.use(new LocalStrategy(Account.authenticate()));
-passport.serializeUser(Account.serializeUser());
-passport.deserializeUser(Account.deserializeUser());
+// passport config. The passport-local-mongoose plugin adds these statics at
+// runtime; they aren't on the base Mongoose Model type, so cast to reach them.
+const AccountAuth = Account as unknown as {
+  authenticate: () => (username: string, password: string, cb: unknown) => void;
+  serializeUser: () => (user: unknown, cb: unknown) => void;
+  deserializeUser: () => (id: unknown, cb: unknown) => void;
+};
+passport.use(new LocalStrategy(AccountAuth.authenticate()));
+passport.serializeUser(AccountAuth.serializeUser());
+passport.deserializeUser(AccountAuth.deserializeUser());
 
 // mongoose
 mongoose.connect(database.url);

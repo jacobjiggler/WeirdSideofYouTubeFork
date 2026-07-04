@@ -1,0 +1,17 @@
+import { Schema, model } from 'mongoose';
+
+const Video = new Schema({
+  _id: Number,
+  videoID: String,
+  views: { type: Number, default: 0 },
+  errorCount: { type: Number, default: 0 },
+  skips: { type: Number, default: 0 },
+  time: { type: Date, default: Date.now },
+  submittedUser: { type: String, default: '' },
+  cache: [{ type: Schema.Types.ObjectId, ref: 'VideoCache' }]
+});
+
+// _id is indexed uniquely by MongoDB automatically; only videoID needs one.
+Video.index({ videoID: 1 }, { unique: true });
+
+export = model('Video', Video);

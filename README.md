@@ -39,12 +39,12 @@ cp .env.example .env
 docker compose up -d --build
 
 # 3. Create an admin account (registration is intentionally disabled)
-docker compose exec app node tools/create_admin_auto.js <username> <password>
+docker compose exec app npx tsx tools/create_admin_auto.js <username> <password>
 
 # 4. Seed some videos (from InitialSources.csv), or add your own
-docker compose exec app node tools/import_csv.js
-docker compose exec app node tools/add_video.js <youtube-url-or-id>
-docker compose exec app node tools/add_playlist.js <playlist-url>
+docker compose exec app npx tsx tools/import_csv.js
+docker compose exec app npx tsx tools/add_video.js <youtube-url-or-id>
+docker compose exec app npx tsx tools/add_playlist.js <playlist-url>
 
 # 5. Run the tests
 docker compose exec app npm test

@@ -101,13 +101,13 @@ docker compose exec app npm test
 
 Registration is intentionally disabled, so create the admin from the CLI:
 ```powershell
-docker compose exec app node tools/create_admin_auto.js <username> <password>
+docker compose exec app npx tsx tools/create_admin_auto.js <username> <password>
 ```
 Then seed the catalog (starter list), or add your own:
 ```powershell
-docker compose exec app node tools/import_csv.js                 # from InitialSources.csv
-docker compose exec app node tools/add_video.js <youtube-url>    # one video
-docker compose exec app node tools/add_playlist.js <playlist-url> # a whole playlist
+docker compose exec app npx tsx tools/import_csv.js                 # from InitialSources.csv
+docker compose exec app npx tsx tools/add_video.js <youtube-url>    # one video
+docker compose exec app npx tsx tools/add_playlist.js <playlist-url> # a whole playlist
 ```
 Log in at `/login`, then use **Admin Panel** to manage videos and **Submissions**
 to moderate public suggestions.
@@ -202,8 +202,8 @@ docker compose logs app -f        # tail logs
 docker compose exec app npm test  # run tests
 
 powershell -ExecutionPolicy Bypass -File tools\backup_db.ps1   # back up the DB
-docker compose exec app node tools/check_private.js            # audit for dead videos
-docker compose exec app node tools/cleanup_videos.js --apply   # prune dead videos
+docker compose exec app npx tsx tools/check_private.js            # audit for dead videos
+docker compose exec app npx tsx tools/cleanup_videos.js --apply   # prune dead videos
 ```
 
 ## 11. Troubleshooting
