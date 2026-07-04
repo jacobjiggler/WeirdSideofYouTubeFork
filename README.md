@@ -50,6 +50,12 @@ docker compose exec app node tools/add_playlist.js <playlist-url>
 docker compose exec app npm test
 ```
 
+> ⚠️ **Always set `SESSION_SECRET` and `COOKIE_SECRET` to strong random values.**
+> If they're left unset, the app falls back to a hardcoded default that is public
+> in this source — which would let an attacker forge session and CSRF tokens.
+> Generate each with `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`
+> and never deploy without them set.
+
 Optional: set `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` in `.env` for real captcha protection on the submission form. Without them, Cloudflare's always-pass test keys are used so the form still works in development.
 
 For public deployment the app is fronted by a **Cloudflare Tunnel** (`cloudflared` → `localhost:3000`); both container ports are bound to `127.0.0.1` so the origin isn't exposed on the LAN or internet.
