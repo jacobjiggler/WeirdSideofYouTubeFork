@@ -23,6 +23,10 @@ This is a modernized, self-hosted fork of the original [RCOS](https://rcos.io/) 
 
 ## Running it locally
 
+> For a full from-scratch walkthrough on a brand-new machine — installing WSL2 /
+> Docker / Git, getting a YouTube API key, migrating the database, and deploying
+> publicly with a Cloudflare Tunnel — see **[SETUP.md](SETUP.md)**.
+
 Requires **Docker Desktop** and a **YouTube Data API v3** key.
 
 ```bash
