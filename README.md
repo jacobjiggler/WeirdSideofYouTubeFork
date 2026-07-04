@@ -14,11 +14,12 @@ This is a modernized, self-hosted fork of the original [RCOS](https://rcos.io/) 
 
 ## Tech stack
 
+- **TypeScript** throughout (server + frontend), run on the server with **`tsx`** (transpile-on-run, no separate build step)
 - **Node.js 22** · **Express 4** · **EJS 3** templating
 - **MongoDB 7** · **Mongoose 8**
 - **Passport** session auth (sessions persisted in MongoDB via `connect-mongo`)
 - **csrf-csrf** (CSRF), **helmet**, **express-rate-limit**, **Cloudflare Turnstile**
-- **webpack 5** bundles the vanilla-JS frontend (no jQuery); **PureCSS** for layout
+- **webpack 5** + **esbuild-loader** bundle the TypeScript frontend (no jQuery); **PureCSS** for layout
 - **Docker Compose** (app + mongo), served publicly via a **Cloudflare Tunnel**
 
 ## Running it locally
@@ -62,16 +63,20 @@ For public deployment the app is fronted by a **Cloudflare Tunnel** (`cloudflare
 
 ## Project layout
 
-- `app.js` — Express entry point / middleware wiring
+The server and frontend are TypeScript. `tsx` runs the server without a build
+step; run `docker compose exec app npm run typecheck` to type-check.
+
+- `app.ts` — Express entry point / middleware wiring
 - `config/` — db, CSRF, and Turnstile configuration
 - `router/` — route definitions (`root`, `admin`, `api`)
 - `controllers/` — request handlers (video API, admin, submissions, reddit crawler)
 - `models/` — Mongoose schemas (video, account, submission, history, …)
 - `views/` — EJS templates
-- `frontend/` — browser JS bundled by webpack into `dist/`
+- `frontend/` — browser TypeScript bundled by webpack (esbuild-loader) into `dist/`
 - `public/` — static assets (CSS, favicon, robots, sitemap)
-- `tools/` — CLI scripts (backups, admin creation, video/playlist import, maintenance)
+- `tools/` — CLI scripts (backups, admin creation, video/playlist import, maintenance) — run with `npx tsx tools/<name>.js`
 - `test/` — mocha unit tests
+- `types/` — TypeScript ambient declarations / Express augmentations
 
 ## Contributing
 
