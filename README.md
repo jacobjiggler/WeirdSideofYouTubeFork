@@ -1,34 +1,72 @@
-# The Weird Side Of YouTube: [![GitHubStats](https://img.shields.io/badge/github-stats-brightgreen.svg)](http://githubstats.com/mmetro/WeirdSideofYouTube)  
+# The Weird Side of YouTube
 
+**Live at [weirdtube.wtf](https://weirdtube.wtf)** — hit one button and get a random strange, surreal, or hilarious YouTube video. Endlessly.
 
-# [Documentation](https://github.com/mmetro/WeirdSideofYouTube/wiki)
-# [How To Use](https://github.com/mmetro/WeirdSideofYouTube/wiki/How-to-use-WSOYT)
+This is a modernized, self-hosted fork of the original [RCOS](https://rcos.io/) project by members of Alpha Chi Rho at Rensselaer Polytechnic Institute. The stack has been brought up to date and the site is deployed self-hosted behind a Cloudflare Tunnel.
 
+## Features
 
-## Why?
+- **Get Weird** — one click serves a random video and autoplays continuously. Each visitor's session never repeats a video until the whole catalog has been seen, then it cycles fresh.
+- **Public submissions** — anyone can suggest a video *or* a whole playlist at [`/submit`](https://weirdtube.wtf/submit). Submissions are protected by a Cloudflare Turnstile captcha, per-IP rate limiting, and a honeypot, and land in an admin **moderation queue** — nothing goes live until an admin approves it.
+- **Admin panel** — add/remove videos, moderate submissions (approve expands playlists via the YouTube API), and view watch history.
+- **Shareable deep links** — the share button copies a `weirdtube.wtf/?v=<id>` link (or opens the native share sheet on mobile) that replays that specific video first.
+- **Discoverable** — `robots.txt`, `sitemap.xml`, and Open Graph / Twitter share cards.
 
-This project was created as a project for the Rensselaer Center for Open Source Software [RCOS](https://rcos.io/). Our group of developers set out to create a website that will serve users strange videeos from the "weird side of youtube". Users can request a range of videos using our api, as well as view the strange videos on the live site!
+## Tech stack
 
-## Submissions:  
+- **Node.js 22** · **Express 4** · **EJS 3** templating
+- **MongoDB 7** · **Mongoose 8**
+- **Passport** session auth (sessions persisted in MongoDB via `connect-mongo`)
+- **csrf-csrf** (CSRF), **helmet**, **express-rate-limit**, **Cloudflare Turnstile**
+- **webpack 5** bundles the vanilla-JS frontend (no jQuery); **PureCSS** for layout
+- **Docker Compose** (app + mongo), served publicly via a **Cloudflare Tunnel**
 
-If you have a strange video you would like to get added to our library, either create an account on the website, or email URL directly to joker@deltaphicrows.com
+## Running it locally
 
-## Contributing To The Weird Side of YouTube:       
+Requires **Docker Desktop** and a **YouTube Data API v3** key.
 
-Please contribute if you see an error or something that looks like it needs improving!   
-Feel free to raise an [issue](https://github.com/ametrocavich/WeirdSideofYouTube/issues) or send us a pull request to help improve the site. Contributions of all kinds, including additions, improvements, additions, translations, documentation updates, and non-coding contriubtions are welcome to join our community.      
+```bash
+# 1. Configure environment
+cp .env.example .env
+#    then edit .env — add your YOUTUBE_API_KEY and generate secrets:
+#    node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 
-## Technologies Used in WSOYT   
+# 2. Build and start (app on http://localhost:3000, mongo on 127.0.0.1:27017)
+docker compose up -d --build
 
-  * HTML5/CSS
-  * MongoDB/Mongoose
-  * PassportJS
-  * ExpressJS
-  * NodeJS
-  * JQuery
+# 3. Create an admin account (registration is intentionally disabled)
+docker compose exec app node tools/create_admin_auto.js <username> <password>
 
-### Our Live Demo is currently down, please check back soon for updates!
+# 4. Seed some videos (from InitialSources.csv), or add your own
+docker compose exec app node tools/import_csv.js
+docker compose exec app node tools/add_video.js <youtube-url-or-id>
+docker compose exec app node tools/add_playlist.js <playlist-url>
 
-License  
-----------
-TheWeirdSideOfYoutube is licensed under the MIT License -see the `LICENSE.MD` file for more information.
+# 5. Run the tests
+docker compose exec app npm test
+```
+
+Optional: set `TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` in `.env` for real captcha protection on the submission form. Without them, Cloudflare's always-pass test keys are used so the form still works in development.
+
+For public deployment the app is fronted by a **Cloudflare Tunnel** (`cloudflared` → `localhost:3000`); both container ports are bound to `127.0.0.1` so the origin isn't exposed on the LAN or internet.
+
+## Project layout
+
+- `app.js` — Express entry point / middleware wiring
+- `config/` — db, CSRF, and Turnstile configuration
+- `router/` — route definitions (`root`, `admin`, `api`)
+- `controllers/` — request handlers (video API, admin, submissions, reddit crawler)
+- `models/` — Mongoose schemas (video, account, submission, history, …)
+- `views/` — EJS templates
+- `frontend/` — browser JS bundled by webpack into `dist/`
+- `public/` — static assets (CSS, favicon, robots, sitemap)
+- `tools/` — CLI scripts (backups, admin creation, video/playlist import, maintenance)
+- `test/` — mocha unit tests
+
+## Contributing
+
+Issues and pull requests welcome. If you spot a bug or something worth improving, open an [issue](https://github.com/jacobjiggler/WeirdSideofYouTubeFork/issues) or send a PR.
+
+## Credits & license
+
+Originally created by the RCOS team (Mike Metrocavich, Colin Atkinson, Jacob Lane, Nathan Siviy, YoungChul Chun, James Lee, and past contributors), in memory of Michael Metrocavich. Licensed under the MIT License — see the [`LICENSE`](LICENSE) file.
