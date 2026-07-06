@@ -179,6 +179,35 @@ const api = {
       .catch((err: any) => {
         res.status(502).json({ error: err.message });
       });
+  },
+
+  // Bulk version: fetch info for up to 50 videos in one YouTube API call.
+  // Used by the admin panel so loading many rows doesn't hammer /api past its
+  // rate limit (?ids=id1,id2,...).
+  getVideoInfoBatch(req: Request, res: Response): void {
+    const youtubeAPIKey = process.env.YOUTUBE_API_KEY;
+    if (!youtubeAPIKey) {
+      res.status(500).json({ error: 'YOUTUBE_API_KEY environment variable is not set' });
+      return;
+    }
+    const ids = String(req.query.ids || '')
+      .split(',')
+      .filter((id) => /^[A-Za-z0-9_-]{11}$/.test(id))
+      .slice(0, 50);
+    if (!ids.length) {
+      res.json({ items: [] });
+      return;
+    }
+    const url = 'https://www.googleapis.com/youtube/v3/videos?part=snippet&id=' +
+      ids.map(encodeURIComponent).join(',') + '&key=' + youtubeAPIKey;
+    fetch(url)
+      .then((response) => response.text().then((body) => {
+        if (response.ok) return res.send(body);
+        return res.status(502).json({ error: 'YouTube API request failed' });
+      }))
+      .catch((err: any) => {
+        res.status(502).json({ error: err.message });
+      });
   }
 };
 

@@ -1,5 +1,4 @@
 import Video = require('../models/video');
-import Counter = require('../models/counters');
 import Submission = require('../models/submission');
 import api = require('./api');
 import reddit = require('./reddit');
@@ -68,7 +67,6 @@ const admin = {
     try {
       let start_id = parseInt(req.params.start);
       let end_id = parseInt(req.params.end);
-      await Counter.findById('videos');
 
       const smallestID = 1;
       if (start_id < smallestID) start_id = smallestID;
@@ -77,7 +75,7 @@ const admin = {
       let len = end_id - start_id + 1;
       if (len > 50) len = 50;
 
-      const docs = await Video.find({ _id: { $gte: start_id } }, { _id: 1, videoID: 1, views: 1, errorCount: 1, skips: 1, time: 1, submittedUser: 1 }).limit(len).lean();
+      const docs = await Video.find({ _id: { $gte: start_id } }, { _id: 1, videoID: 1, views: 1, errorCount: 1, skips: 1, time: 1, submittedUser: 1 }).sort({ _id: 1 }).limit(len).lean();
       res.json(docs);
     } catch (err: any) {
       res.status(500).json({ error: err.message });

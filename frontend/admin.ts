@@ -1,9 +1,11 @@
 import escape from 'escape-html';
 import ready from './ready';
 
-var currentVideoID = 1;
 var numVideos = 0;
-var videosPerPage = 50;
+var loadedCount = 0;
+var isLoading = false;
+var allLoaded = false;
+var pageSize = 50;
 
 // CSRF token rendered into the admin page; required on every state-changing POST.
 function getCsrfToken(): string {
@@ -11,30 +13,15 @@ function getCsrfToken(): string {
   return meta ? (meta.getAttribute('content') || '') : '';
 }
 
-function loadNewTable(): void {
-  var endRange = (currentVideoID + videosPerPage <= numVideos) ? currentVideoID + videosPerPage : numVideos;
-  var rangeTxt = 'Showing videos ' + currentVideoID + ' through ' + endRange + ' of ' + numVideos;
-  (document.getElementById('vidRange') as HTMLElement).innerText = rangeTxt;
+function setLoading(on: boolean): void {
+  var el = document.getElementById('loadingMsg');
+  if (el) el.style.display = on ? '' : 'none';
+}
 
-  var vidTable = document.getElementById('videoTable') as HTMLElement;
-  var rows = vidTable.querySelectorAll('tr');
-  for (var i = 0; i < rows.length; ++i) {
-    if (/videoRow/.test(rows[i].className)) {
-      vidTable.removeChild(rows[i]);
-    }
-  }
-
-  fetch('/admin/getvidrange/' + currentVideoID + '/' + (currentVideoID + 49), { credentials: 'same-origin' }).then(function (response) {
-    return response.json();
-  }).then(function (vids: any) {
-    for (var key in vids) {
-      var val = vids[key];
-      var dom = generateNewEntry(val);
-      (document.getElementById('videoTable') as HTMLElement).appendChild(dom);
-    }
-  }).catch(function (error: any) {
-    console.error(error);
-  });
+function updateRange(): void {
+  var el = document.getElementById('vidRange');
+  if (!el) return;
+  el.innerText = numVideos === 0 ? 'No videos' : ('Showing ' + loadedCount + ' of ' + numVideos + ' videos');
 }
 
 function generateNewEntry(video: any): HTMLElement {
@@ -81,41 +68,85 @@ function generateNewEntry(video: any): HTMLElement {
   tr.insertAdjacentHTML('beforeEnd', '<td class = "data-cell">' + escape(video.skips / video.views * 100) + '%</td>');
   tr.insertAdjacentHTML('beforeEnd', '<td class = "data-cell">' + escape(video.errorCount / video.views * 100) + '%</td>');
 
-  fetch('/api/getVidInfo/' + encodeURIComponent(video.videoID)).then(function (response) {
-    return response.json();
-  }).then(function (data: any) {
-    (document.querySelector('#videoTable #vid' + escape(video.videoID) + ' #title') as HTMLElement).innerText = data.items[0].snippet.title;
-  });
-
+  // Title is filled in later by a single batched request (see loadMore).
   return tr;
 }
 
-ready(function () {
-  loadNewTable();
+// Fetch titles for a whole batch in one YouTube API call and fill in the cells.
+function fillTitles(vids: any[]): void {
+  var ids = vids.map(function (v) { return v.videoID; }).join(',');
+  if (!ids) return;
+  fetch('/api/getvidinfobatch?ids=' + encodeURIComponent(ids)).then(function (response) {
+    return response.json();
+  }).then(function (data: any) {
+    var titleById: { [id: string]: string } = {};
+    (data.items || []).forEach(function (item: any) { titleById[item.id] = item.snippet.title; });
+    vids.forEach(function (v: any) {
+      var cell = document.querySelector('#videoTable #vid' + escape(v.videoID) + ' #title');
+      if (cell && titleById[v.videoID] != null) (cell as HTMLElement).innerText = titleById[v.videoID];
+    });
+  }).catch(function (error: any) {
+    console.error(error);
+  });
+}
 
+// Fetch and append the next batch of videos. Guards against concurrent loads and
+// stops once everything is loaded.
+function loadMore(): void {
+  if (isLoading || allLoaded || (numVideos > 0 && loadedCount >= numVideos)) return;
+  isLoading = true;
+  setLoading(true);
+
+  var start = loadedCount + 1;
+  var end = start + pageSize - 1;
+
+  fetch('/admin/getvidrange/' + start + '/' + end, { credentials: 'same-origin' }).then(function (response) {
+    return response.json();
+  }).then(function (vids: any[]) {
+    var table = document.getElementById('videoTable');
+    if (table) {
+      for (var i = 0; i < vids.length; i++) {
+        table.appendChild(generateNewEntry(vids[i]));
+      }
+    }
+    fillTitles(vids); // one batched title request per page, not one per row
+    loadedCount += vids.length;
+    if (vids.length === 0 || loadedCount >= numVideos) allLoaded = true;
+    updateRange();
+    isLoading = false;
+    setLoading(false);
+
+    // If the content still doesn't fill the viewport, keep loading so the user
+    // can actually scroll to trigger the observer.
+    if (!allLoaded && document.documentElement.scrollHeight <= window.innerHeight + 200) {
+      loadMore();
+    }
+  }).catch(function (error: any) {
+    console.error(error);
+    isLoading = false;
+    setLoading(false);
+  });
+}
+
+ready(function () {
   fetch('/api/getnumvids/').then(function (response) {
     return response.json();
   }).then(function (data: any) {
     numVideos = data.numVids;
-    (document.getElementById('vidRange') as HTMLElement).innerText = 'Showing videos ' +
-      currentVideoID + ' through ' +
-      ((currentVideoID + videosPerPage <= numVideos) ? currentVideoID + videosPerPage : numVideos) +
-      ' of ' + numVideos;
+    updateRange();
+    loadMore(); // first batch
+
+    // Auto-load the next batch as the sentinel nears the viewport.
+    var sentinel = document.getElementById('scroll-sentinel');
+    if (sentinel && 'IntersectionObserver' in window) {
+      var observer = new IntersectionObserver(function (entries) {
+        if (entries[0].isIntersecting) loadMore();
+      }, { rootMargin: '400px' });
+      observer.observe(sentinel);
+    } else {
+      window.addEventListener('scroll', function () {
+        if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 400) loadMore();
+      });
+    }
   });
-
-  var nxtPage = function () {
-    currentVideoID += videosPerPage;
-    if (currentVideoID > numVideos) currentVideoID -= videosPerPage;
-    loadNewTable();
-  };
-  (document.getElementById('nextButtonTop') as HTMLElement).onclick = nxtPage;
-  (document.getElementById('nextButtonBottom') as HTMLElement).onclick = nxtPage;
-
-  var prvPage = function () {
-    currentVideoID -= videosPerPage;
-    if (currentVideoID < 1) currentVideoID = 1;
-    loadNewTable();
-  };
-  (document.getElementById('previousButtonTop') as HTMLElement).onclick = prvPage;
-  (document.getElementById('previousButtonBottom') as HTMLElement).onclick = prvPage;
 });
