@@ -73,20 +73,30 @@ function generateNewEntry(video: any): HTMLElement {
 }
 
 // Fetch titles for a whole batch in one YouTube API call and fill in the cells.
+// Every cell is always filled: the real title, or a fallback for videos YouTube
+// no longer returns (private/deleted) or if the request fails.
 function fillTitles(vids: any[]): void {
   var ids = vids.map(function (v) { return v.videoID; }).join(',');
   if (!ids) return;
+
+  function setTitle(videoID: string, text: string) {
+    var cell = document.querySelector('#videoTable #vid' + escape(videoID) + ' #title');
+    if (cell) (cell as HTMLElement).innerText = text;
+  }
+
   fetch('/api/getvidinfobatch?ids=' + encodeURIComponent(ids)).then(function (response) {
     return response.json();
   }).then(function (data: any) {
     var titleById: { [id: string]: string } = {};
-    (data.items || []).forEach(function (item: any) { titleById[item.id] = item.snippet.title; });
+    (data.items || []).forEach(function (item: any) {
+      if (item.snippet && item.snippet.title) titleById[item.id] = item.snippet.title;
+    });
     vids.forEach(function (v: any) {
-      var cell = document.querySelector('#videoTable #vid' + escape(v.videoID) + ' #title');
-      if (cell && titleById[v.videoID] != null) (cell as HTMLElement).innerText = titleById[v.videoID];
+      setTitle(v.videoID, titleById[v.videoID] != null ? titleById[v.videoID] : '(title unavailable)');
     });
   }).catch(function (error: any) {
     console.error(error);
+    vids.forEach(function (v: any) { setTitle(v.videoID, '(title unavailable)'); });
   });
 }
 
