@@ -1,5 +1,6 @@
 import Submission = require('../models/submission');
 import { siteKey, verify } from '../config/turnstile';
+import { extractVideoId } from '../lib/youtube';
 import type { Request, Response } from 'express';
 
 interface Parsed {
@@ -22,14 +23,11 @@ function parseSubmission(raw: unknown): Parsed | null {
     return { type: 'playlist', sourceId: listMatch[1], originalUrl: url };
   }
 
-  const videoMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|v\/))([A-Za-z0-9_-]{11})/);
-  if (videoMatch) {
-    return { type: 'video', sourceId: videoMatch[1], originalUrl: url };
+  const vid = extractVideoId(url);
+  if (vid) {
+    return { type: 'video', sourceId: vid, originalUrl: url };
   }
 
-  if (/^[A-Za-z0-9_-]{11}$/.test(url)) {
-    return { type: 'video', sourceId: url, originalUrl: url };
-  }
   if (/^(PL|UU|LL|FL|OL|RD)[A-Za-z0-9_-]{8,48}$/.test(url)) {
     return { type: 'playlist', sourceId: url, originalUrl: url };
   }

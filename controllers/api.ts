@@ -2,6 +2,7 @@ import Video = require('../models/video');
 import Counter = require('../models/counters');
 import VideoHistory = require('../models/videohistory');
 import BannedVideo = require('../models/bannedvideo');
+import { extractVideoId } from '../lib/youtube';
 import type { Request, Response } from 'express';
 
 type Callback<T = unknown> = (err: unknown, result?: T) => void;
@@ -15,11 +16,8 @@ const api = {
   // video it calls back with the created doc; on a duplicate/banned video with
   // the plain id string (callers distinguish "added" by checking for .videoID).
   async addVideo(video_url_or_id: string, callback: Callback): Promise<void> {
-    const video_split = video_url_or_id.match(/(?:https?:\/{2})?(?:w{3}\.)?youtu(?:be)?\.(?:com|be)(?:\/watch\?v=|\/)([^\s&?]+)/);
-    let vidID = video_url_or_id;
-    if (video_url_or_id != null && video_split != null) {
-      vidID = video_split[1];
-    }
+    const vidID = extractVideoId(video_url_or_id);
+    if (!vidID) return callback(new Error('Not a valid YouTube video id or URL: ' + video_url_or_id));
     try {
       const banned = await BannedVideo.findOne({ videoID: vidID });
       if (banned) return callback(null, vidID);
@@ -64,11 +62,7 @@ const api = {
   },
 
   removeVideo(video_url_or_id: string): void {
-    const video_split = video_url_or_id.match(/(?:https?:\/{2})?(?:w{3}\.)?youtu(?:be)?\.(?:com|be)(?:\/watch\?v=|\/)([^\s&?]+)/);
-    let vidID = video_url_or_id;
-    if (video_url_or_id != null && video_split != null) {
-      vidID = video_split[1];
-    }
+    const vidID = extractVideoId(video_url_or_id);
     if (vidID) {
       api.removeVideoNoParse(vidID);
     }
