@@ -21,20 +21,28 @@ function initPlayer(): void {
   });
 }
 
+// Must match the min-width breakpoint in WeirdStyle.css that puts Next/Share
+// beside the portrait player instead of below it.
+var SIDE_BY_SIDE_QUERY = '(min-width: 769px)';
+
 function sizePortraitPlayer(): void {
   var container = document.getElementById('youtube-player-container');
   if (!container || !container.classList.contains('portrait')) return;
   var top = container.getBoundingClientRect().top;
-  // The Next/Share buttons render below the player itself — measure their real
-  // height (rather than guessing) so the player doesn't grow to fill the whole
-  // viewport and push them off the bottom of the page.
-  var playDiv = document.getElementById('playDiv');
+  // Below the 769px breakpoint the Next/Share buttons render below the
+  // player itself — measure their real height (rather than guessing) so the
+  // player doesn't grow to fill the whole viewport and push them off the
+  // bottom of the page. Above it, CSS moves them beside the player, so they
+  // no longer compete for vertical space and nothing needs reserving.
   var reserved = 0;
-  if (playDiv) {
-    var pdStyle = getComputedStyle(playDiv);
-    reserved = playDiv.getBoundingClientRect().height +
-      parseFloat(pdStyle.marginTop || '0') +
-      parseFloat(pdStyle.marginBottom || '0');
+  if (!window.matchMedia(SIDE_BY_SIDE_QUERY).matches) {
+    var playDiv = document.getElementById('playDiv');
+    if (playDiv) {
+      var pdStyle = getComputedStyle(playDiv);
+      reserved = playDiv.getBoundingClientRect().height +
+        parseFloat(pdStyle.marginTop || '0') +
+        parseFloat(pdStyle.marginBottom || '0');
+    }
   }
   var h = computePortraitHeight(window.innerHeight, top, reserved);
   container.style.setProperty('--portrait-h', h + 'px');

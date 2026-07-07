@@ -62,7 +62,7 @@
   </div>
 
   <!-- Player: hidden until Get Weird is clicked -->
-  <div id='youtube-player-container' style="display:none;">
+  <div id='youtube-player-container'>
     <div id="player-wrapper">
       <div id='youtube-player'></div>
     </div>
@@ -96,7 +96,10 @@
   <script>
     function startPlayer() {
       document.getElementById('splash').style.display = 'none';
-      document.getElementById('youtube-player-container').style.display = 'block';
+      // A class (not an inline style) so CSS media queries — e.g. the portrait
+      // side-by-side layout — can still override the display value. Inline
+      // styles always win over stylesheet rules regardless of specificity.
+      document.getElementById('youtube-player-container').classList.add('visible');
     }
 
     document.getElementById('gobutton').addEventListener('click', function() {

@@ -18,6 +18,11 @@ body {
     z-index: 101;
     margin: 10px auto;
     width: 80%;
+    display: none;
+}
+
+#youtube-player-container.visible {
+    display: block;
 }
 
 /* 16:9 player — capped so navbar + titlebox + player + next button all fit without scrolling */
@@ -59,6 +64,28 @@ body {
     max-height: var(--portrait-h, 70vh);
     width: auto;
     margin: 0 auto;
+}
+
+/* On viewports wide enough to spare the width (matches the >768px breakpoint
+   where the mobile media query below stacks buttons under the player
+   instead), put Next/Share beside a portrait video rather than below it —
+   the button row no longer eats into the player's vertical space, which is
+   the scarcer dimension for a 9:16 video. JS mirrors this same 769px
+   threshold when deciding whether to reserve room below the player. */
+@media screen and (min-width: 769px) {
+  #youtube-player-container.portrait {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    width: auto;
+  }
+
+  #youtube-player-container.portrait #playDiv {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 0;
+  }
 }
 
 #splash {
