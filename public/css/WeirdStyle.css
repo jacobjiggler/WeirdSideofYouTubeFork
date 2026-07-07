@@ -51,8 +51,12 @@ body {
 
 #youtube-player-container.portrait #player-wrapper {
     aspect-ratio: 9 / 16;
-    height: min(80vh, calc(95vw * 16 / 9));
-    max-height: 80vh;
+    /* --portrait-h is set by JS to the actual space left below the nav/title, so
+       the player never runs off the bottom of the viewport regardless of how
+       tall the navbar is (e.g. more menu items when logged in as admin). Falls
+       back to a fixed vh before JS runs / if JS never sets it. */
+    height: min(var(--portrait-h, 70vh), calc(95vw * 16 / 9));
+    max-height: var(--portrait-h, 70vh);
     width: auto;
     margin: 0 auto;
 }

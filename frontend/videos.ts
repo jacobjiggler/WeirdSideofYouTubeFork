@@ -20,6 +20,21 @@ function initPlayer(): void {
   });
 }
 
+// How much vertical space is actually left below the player for a portrait
+// video, so it never runs off the bottom of the viewport — the navbar's height
+// varies (e.g. more menu items when logged in as admin), so a fixed vh figure
+// isn't reliable.
+function sizePortraitPlayer(): void {
+  var container = document.getElementById('youtube-player-container');
+  if (!container || !container.classList.contains('portrait')) return;
+  var top = container.getBoundingClientRect().top;
+  var available = window.innerHeight - top - 16; // 16px bottom breathing room
+  if (available < 200) available = 200; // sane floor on very short viewports
+  container.style.setProperty('--portrait-h', available + 'px');
+}
+
+window.addEventListener('resize', sizePortraitPlayer);
+
 // Vertical videos (YouTube Shorts) look bad pillarboxed in the 16:9 player.
 // Detect the true aspect ratio via YouTube's original-aspect-ratio thumbnail
 // (oardefault.jpg) and switch the player to a portrait layout when the video is
@@ -30,7 +45,10 @@ function applyAspect(id: string): void {
   container.classList.remove('portrait'); // assume landscape until proven portrait
   var img = new Image();
   img.onload = function () {
-    if (img.naturalHeight > img.naturalWidth) container.classList.add('portrait');
+    if (img.naturalHeight > img.naturalWidth) {
+      container.classList.add('portrait');
+      sizePortraitPlayer();
+    }
   };
   img.src = 'https://i.ytimg.com/vi/' + id + '/oardefault.jpg';
 }
