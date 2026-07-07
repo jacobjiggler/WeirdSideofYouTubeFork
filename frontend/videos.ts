@@ -1,4 +1,5 @@
 import YouTubePlayer from 'youtube-player';
+import { computePortraitHeight } from '../lib/portraitSize';
 
 let player: any = null;
 
@@ -20,17 +21,12 @@ function initPlayer(): void {
   });
 }
 
-// How much vertical space is actually left below the player for a portrait
-// video, so it never runs off the bottom of the viewport — the navbar's height
-// varies (e.g. more menu items when logged in as admin), so a fixed vh figure
-// isn't reliable.
 function sizePortraitPlayer(): void {
   var container = document.getElementById('youtube-player-container');
   if (!container || !container.classList.contains('portrait')) return;
   var top = container.getBoundingClientRect().top;
-  var available = window.innerHeight - top - 16; // 16px bottom breathing room
-  if (available < 200) available = 200; // sane floor on very short viewports
-  container.style.setProperty('--portrait-h', available + 'px');
+  var h = computePortraitHeight(window.innerHeight, top);
+  container.style.setProperty('--portrait-h', h + 'px');
 }
 
 window.addEventListener('resize', sizePortraitPlayer);
