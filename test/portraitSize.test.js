@@ -1,5 +1,15 @@
 'use strict';
 
+// NOTE: these tests only check the arithmetic in computePortraitHeight in
+// isolation. They do NOT prove the real page doesn't scroll — that depends on
+// actual rendered CSS/layout (other elements on the page, margins, the real
+// reservedBelow value measured from the DOM, etc.), none of which exists here.
+// A previous version of this fix passed tests just like these while the
+// Next/Share buttons still ran off the bottom of the real page, because the
+// caller wasn't passing a reservedBelow at all. The real regression guard is
+// the manual "no scrollbar after clicking Get Weird" check in CLAUDE.md,
+// checked live at a couple of viewport heights and both nav states — do that
+// after any change here, don't rely on these tests alone.
 var assert = require('assert');
 var computePortraitHeight = require('../lib/portraitSize').computePortraitHeight;
 
