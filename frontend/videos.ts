@@ -25,7 +25,18 @@ function sizePortraitPlayer(): void {
   var container = document.getElementById('youtube-player-container');
   if (!container || !container.classList.contains('portrait')) return;
   var top = container.getBoundingClientRect().top;
-  var h = computePortraitHeight(window.innerHeight, top);
+  // The Next/Share buttons render below the player itself — measure their real
+  // height (rather than guessing) so the player doesn't grow to fill the whole
+  // viewport and push them off the bottom of the page.
+  var playDiv = document.getElementById('playDiv');
+  var reserved = 0;
+  if (playDiv) {
+    var pdStyle = getComputedStyle(playDiv);
+    reserved = playDiv.getBoundingClientRect().height +
+      parseFloat(pdStyle.marginTop || '0') +
+      parseFloat(pdStyle.marginBottom || '0');
+  }
+  var h = computePortraitHeight(window.innerHeight, top, reserved);
   container.style.setProperty('--portrait-h', h + 'px');
 }
 

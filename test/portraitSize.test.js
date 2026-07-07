@@ -27,4 +27,24 @@ describe('computePortraitHeight', function () {
     assert.strictEqual(computePortraitHeight(400, 350), 200);
     assert.strictEqual(computePortraitHeight(300, 500), 200);
   });
+
+  it('reserves room for controls (Next/Share buttons) rendered below the player', function () {
+    // Regression: the player used to fill *all* remaining space down to the
+    // viewport edge, pushing the Next/Share buttons below it off-screen.
+    var viewportHeight = 860;
+    var containerTop = 184;
+    var reservedBelow = 90; // Next/Share button row
+    var height = computePortraitHeight(viewportHeight, containerTop, reservedBelow);
+    assert.ok(
+      containerTop + height + reservedBelow <= viewportHeight,
+      'player + reserved controls below it must both stay within the viewport'
+    );
+  });
+
+  it('shrinks further as the reserved control area grows', function () {
+    var noControls = computePortraitHeight(860, 184, 0);
+    var withControls = computePortraitHeight(860, 184, 90);
+    assert.ok(withControls < noControls, 'reserving space for controls must reduce the player height');
+    assert.strictEqual(noControls - withControls, 90);
+  });
 });
