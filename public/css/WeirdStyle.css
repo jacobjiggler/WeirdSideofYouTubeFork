@@ -42,6 +42,21 @@ body {
     display: block;
 }
 
+/* Portrait layout for vertical videos (YouTube Shorts): size the player by
+   height (bounded by the viewport width) so the video fills a 9:16 frame instead
+   of pillarboxing inside the 16:9 box, and center it. */
+#youtube-player-container.portrait {
+    width: 100%;
+}
+
+#youtube-player-container.portrait #player-wrapper {
+    aspect-ratio: 9 / 16;
+    height: min(80vh, calc(95vw * 16 / 9));
+    max-height: 80vh;
+    width: auto;
+    margin: 0 auto;
+}
+
 #splash {
     display: flex;
     align-items: center;

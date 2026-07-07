@@ -20,12 +20,28 @@ function initPlayer(): void {
   });
 }
 
+// Vertical videos (YouTube Shorts) look bad pillarboxed in the 16:9 player.
+// Detect the true aspect ratio via YouTube's original-aspect-ratio thumbnail
+// (oardefault.jpg) and switch the player to a portrait layout when the video is
+// taller than it is wide. Defaults to landscape if the thumbnail is missing.
+function applyAspect(id: string): void {
+  var container = document.getElementById('youtube-player-container');
+  if (!container) return;
+  container.classList.remove('portrait'); // assume landscape until proven portrait
+  var img = new Image();
+  img.onload = function () {
+    if (img.naturalHeight > img.naturalWidth) container.classList.add('portrait');
+  };
+  img.src = 'https://i.ytimg.com/vi/' + id + '/oardefault.jpg';
+}
+
 function playNextVid(): void {
   if (!player) initPlayer();
   fetch('./api/getrandomvid').then(function (response) {
     return response.json();
   }).then(function (vid: any) {
     (window as any).currentVidId = vid.vidID;
+    applyAspect(vid.vidID);
     player.loadVideoById(vid.vidID);
     player.playVideo();
   }).catch(function (error: any) {
@@ -38,6 +54,7 @@ function playNextVid(): void {
 function playSpecificVid(id: string): void {
   if (!player) initPlayer();
   (window as any).currentVidId = id;
+  applyAspect(id);
   player.loadVideoById(id);
   player.playVideo();
 }
