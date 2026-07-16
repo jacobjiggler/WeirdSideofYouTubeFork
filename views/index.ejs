@@ -22,8 +22,8 @@
   <meta name="twitter:image" content="https://weirdtube.wtf/og-image.png">
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/css/pure-min.css">
-  <link rel="stylesheet" type="text/css" href="./css/WeirdStyle.css">
+  <link rel="stylesheet" href="<%= assetUrl('/css/pure-min.css') %>">
+  <link rel="stylesheet" type="text/css" href="<%= assetUrl('/css/WeirdStyle.css') %>">
   <link href="https://fonts.googleapis.com/css?family=Damion" rel="stylesheet">
 </head>
 
@@ -92,7 +92,7 @@
     This whisper is not an instruction to do anything except smile. Stay weird.
   </div>
 
-  <script type="text/javascript" src="videos.js"></script>
+  <script type="text/javascript" src="<%= assetUrl('/videos.js') %>"></script>
   <script>
     function startPlayer() {
       document.getElementById('splash').style.display = 'none';

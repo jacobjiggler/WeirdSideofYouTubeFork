@@ -2,8 +2,8 @@
 <html>
 <head>
 	<meta name="csrf-token" content="<%= csrfToken %>">
-	<link rel="stylesheet" href="/css/pure-min.css">
- 	<link rel="stylesheet" type="text/css" href="/css/newstyle.css">
+	<link rel="stylesheet" href="<%= assetUrl('/css/pure-min.css') %>">
+ 	<link rel="stylesheet" type="text/css" href="<%= assetUrl('/css/newstyle.css') %>">
 </head>
 <body>
 
@@ -83,7 +83,7 @@
 
 <br />
 
-<script type="text/javascript" src="admin.js"></script>
+<script type="text/javascript" src="<%= assetUrl('/admin.js') %>"></script>
 
 </body>
 </html>

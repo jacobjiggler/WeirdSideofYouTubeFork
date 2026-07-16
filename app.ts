@@ -19,6 +19,7 @@ import { rateLimit } from 'express-rate-limit';
 import Account from './models/account';
 import database from './config/db';
 import setupRouter from './router';
+import { assetUrl } from './lib/assetVersion';
 
 // global config
 const app = express();
@@ -27,6 +28,7 @@ app.set('port', process.env.PORT || 3000);
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 app.set('view options', { layout: false });
+app.locals.assetUrl = assetUrl;
 
 // We sit behind the Cloudflare tunnel / reverse proxy, so trust the first proxy
 // hop. This makes req.secure / req.ip reflect the real client (needed for secure
@@ -64,8 +66,26 @@ app.use(session({
 }));
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(path.join(__dirname, 'dist')));
+// Static assets are served with a content-hashed ?v= query string (see
+// lib/assetVersion.ts and its use in views), so the URL itself changes
+// whenever a deploy changes a file's contents. That makes a very long,
+// immutable cache safe for both browsers and Cloudflare's edge — no risk of
+// serving a stale asset after a deploy.
+const staticOptions = { maxAge: '1y', immutable: true };
+app.use(express.static(path.join(__dirname, 'public'), staticOptions));
+app.use(express.static(path.join(__dirname, 'dist'), staticOptions));
+
+// Everything past this point is a dynamic route (session/user-specific nav,
+// CSRF-token-bearing forms like /login and /submit, the admin panel, the
+// JSON API). None of it may ever be cached — by a browser, an intermediate
+// proxy, or Cloudflare's edge — regardless of what caching rules exist
+// upstream, since a cached CSRF token or logged-in nav would be served to
+// every subsequent visitor. Static requests above already returned before
+// reaching this middleware, so this only touches genuinely dynamic responses.
+app.use((_req, res, next) => {
+  res.set('Cache-Control', 'private, no-store');
+  next();
+});
 
 // Rate limiting. Protects login from brute force and the API from abuse.
 const apiLimiter = rateLimit({
