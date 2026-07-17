@@ -90,6 +90,10 @@ function playSpecificVid(id: string): void {
   applyAspect(id);
   player.loadVideoById(id);
   player.playVideo();
+  // This path never hits getrandomvid (it plays a specific known id), so log
+  // it separately — otherwise deep-linked plays would be invisible to the
+  // avg-videos-watched / session-ending-video stats.
+  fetch('./api/trackvideoplay/' + id).catch(function () {});
 }
 
 (window as any).playNextVid = playNextVid;

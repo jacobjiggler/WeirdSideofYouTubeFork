@@ -9,5 +9,6 @@ router.get('/getnumvids', api.getNumVids);
 router.get('/gethistory', api.getVideoHistory);
 router.get('/getVidInfo/:videoID/', api.getVideoInfo);
 router.get('/getvidinfobatch', api.getVideoInfoBatch);
+router.get('/trackvideoplay/:videoID', api.trackVideoPlay);
 
 export = router;

@@ -14,5 +14,6 @@ router.get('/crawlreddit', admin.postCrawlReddit);
 router.get('/submissions', attachToken, admin.getSubmissions);
 router.post('/submissions/approve', csrfProtection, admin.postApproveSubmission);
 router.post('/submissions/reject', csrfProtection, admin.postRejectSubmission);
+router.get('/stats', admin.getStats);
 
 export = router;

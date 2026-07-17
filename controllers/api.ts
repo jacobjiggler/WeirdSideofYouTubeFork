@@ -2,6 +2,7 @@ import Video = require('../models/video');
 import Counter = require('../models/counters');
 import VideoHistory = require('../models/videohistory');
 import BannedVideo = require('../models/bannedvideo');
+import AnalyticsEvent = require('../models/analyticsevent');
 import { extractVideoId } from '../lib/youtube';
 import type { Request, Response } from 'express';
 
@@ -101,8 +102,23 @@ const api = {
           userAgent: (req.headers && req.headers['user-agent']) || ''
         }).catch((e: unknown) => { console.log(e); });
       }
+      AnalyticsEvent.create({ sessionID: req.sessionID, type: 'video_played', videoID: doc.videoID })
+        .catch((e: unknown) => { console.log(e); });
       res.json({ vidID: doc.videoID });
     });
+  },
+
+  // Records a video_played event for videos played via a shared /?v=<id>
+  // deep link, which the client plays directly without ever calling
+  // getRandomVid — without this, deep-linked plays would be invisible to the
+  // avg-videos-watched / session-ending-video stats.
+  trackVideoPlay(req: Request, res: Response): void {
+    const vidID = extractVideoId(req.params.videoID);
+    if (vidID) {
+      AnalyticsEvent.create({ sessionID: req.sessionID, type: 'video_played', videoID: vidID })
+        .catch((e: unknown) => { console.log(e); });
+    }
+    res.status(204).end();
   },
 
   async getVidRange(req: Request, res: Response): Promise<void> {

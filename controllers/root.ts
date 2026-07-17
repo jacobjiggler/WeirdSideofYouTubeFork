@@ -1,9 +1,15 @@
 import passport from 'passport';
 import api = require('./api');
+import AnalyticsEvent = require('../models/analyticsevent');
 import type { Request, Response } from 'express';
 
 const root = {
   getIndex(req: Request, res: Response): void {
+    // Fire-and-forget: a page_view marks this session as having landed, so it
+    // can be compared against video_played events to measure how many
+    // visitors never click "Get Weird".
+    AnalyticsEvent.create({ sessionID: req.sessionID, type: 'page_view' }).catch((e: unknown) => { console.log(e); });
+
     if (!req.session.seenVideos) req.session.seenVideos = [];
     api.randomVideoID(req.session.seenVideos, (err: any, doc: any) => {
       if (err) { res.status(500).send('Database error'); return; }

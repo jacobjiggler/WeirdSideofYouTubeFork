@@ -3,12 +3,13 @@
 var assert = require('assert');
 var Video = require('../models/video');
 var VideoHistory = require('../models/videohistory');
+var AnalyticsEvent = require('../models/analyticsevent');
 var api = require('../controllers/api');
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 function makeReq(overrides) {
-  return Object.assign({ session: {}, user: null }, overrides);
+  return Object.assign({ session: {}, user: null, sessionID: 'sess-1' }, overrides);
 }
 
 function makeRes() {
@@ -16,6 +17,7 @@ function makeRes() {
   res.status = function (code) { res._status = code; return res; };
   res.json   = function (body) { res._body   = body; return res; };
   res.send   = function (body) { res._body   = body; return res; };
+  res.end    = function () { return res; };
   return res;
 }
 
@@ -113,16 +115,20 @@ describe('randomVideoID', function () {
 describe('getRandomVid', function () {
   var origRandomVideoID;
   var origHistoryCreate;
+  var origAnalyticsCreate;
 
   beforeEach(function () {
     origRandomVideoID  = api.randomVideoID;
     origHistoryCreate  = VideoHistory.create;
+    origAnalyticsCreate = AnalyticsEvent.create;
     VideoHistory.create = function () { return Promise.resolve(); };
+    AnalyticsEvent.create = function () { return Promise.resolve(); };
   });
 
   afterEach(function () {
     api.randomVideoID   = origRandomVideoID;
     VideoHistory.create = origHistoryCreate;
+    AnalyticsEvent.create = origAnalyticsCreate;
   });
 
   it('initialises seenVideos array and adds the returned video to it', function (done) {
@@ -225,5 +231,83 @@ describe('getRandomVid', function () {
       done();
     };
     api.getRandomVid(req, res);
+  });
+
+  it('logs a video_played analytics event for every video served, regardless of login', function (done) {
+    var fakeDoc = { _id: 1, videoID: 'abc123' };
+    api.randomVideoID = function (_seen, cb) { cb(null, fakeDoc); };
+    var captured;
+    AnalyticsEvent.create = function (data) { captured = data; return Promise.resolve(); };
+
+    var req = makeReq({ session: {}, user: null, sessionID: 'sess-42' });
+    var res = makeRes();
+    res.json = function () {
+      assert.strictEqual(captured.sessionID, 'sess-42');
+      assert.strictEqual(captured.type, 'video_played');
+      assert.strictEqual(captured.videoID, 'abc123');
+      done();
+    };
+    api.getRandomVid(req, res);
+  });
+});
+
+// ─── trackVideoPlay ─────────────────────────────────────────────────────────
+
+describe('trackVideoPlay', function () {
+  var origAnalyticsCreate;
+
+  beforeEach(function () {
+    origAnalyticsCreate = AnalyticsEvent.create;
+  });
+
+  afterEach(function () {
+    AnalyticsEvent.create = origAnalyticsCreate;
+  });
+
+  it('logs a video_played event for a valid id and returns 204', function (done) {
+    var captured;
+    AnalyticsEvent.create = function (data) { captured = data; return Promise.resolve(); };
+
+    var req = makeReq({ params: { videoID: 'dQw4w9WgXcQ' }, sessionID: 'sess-99' });
+    var res = makeRes();
+    res.status = function (code) {
+      assert.strictEqual(code, 204);
+      assert.strictEqual(captured.sessionID, 'sess-99');
+      assert.strictEqual(captured.type, 'video_played');
+      assert.strictEqual(captured.videoID, 'dQw4w9WgXcQ');
+      done();
+      return res;
+    };
+    api.trackVideoPlay(req, res);
+  });
+
+  it('extracts the id from a full URL, not just a bare id', function (done) {
+    var captured;
+    AnalyticsEvent.create = function (data) { captured = data; return Promise.resolve(); };
+
+    var req = makeReq({ params: { videoID: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' } });
+    var res = makeRes();
+    res.status = function (code) {
+      assert.strictEqual(code, 204);
+      assert.strictEqual(captured.videoID, 'dQw4w9WgXcQ');
+      done();
+      return res;
+    };
+    api.trackVideoPlay(req, res);
+  });
+
+  it('does not log anything for an unparseable id, but still returns 204', function (done) {
+    var called = false;
+    AnalyticsEvent.create = function () { called = true; return Promise.resolve(); };
+
+    var req = makeReq({ params: { videoID: 'not a video id' } });
+    var res = makeRes();
+    res.status = function (code) {
+      assert.strictEqual(code, 204);
+      assert.strictEqual(called, false);
+      done();
+      return res;
+    };
+    api.trackVideoPlay(req, res);
   });
 });

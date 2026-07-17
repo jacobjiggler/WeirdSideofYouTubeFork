@@ -1,5 +1,6 @@
 import Video = require('../models/video');
 import Submission = require('../models/submission');
+import AnalyticsEvent = require('../models/analyticsevent');
 import api = require('./api');
 import reddit = require('./reddit');
 import type { Request, Response, NextFunction } from 'express';
@@ -34,6 +35,27 @@ async function addPlaylist(playlistId: string): Promise<number> {
     pages++;
   } while (pageToken && pages < 4);
   return added;
+}
+
+// Best-effort title lookup for the stats page's top-ending-videos list. Stats
+// are still useful without titles, so failures here are swallowed.
+async function lookupTitles(ids: string[]): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  const key = process.env.YOUTUBE_API_KEY;
+  if (!key || !ids.length) return out;
+  try {
+    const url = 'https://www.googleapis.com/youtube/v3/videos?part=snippet&id=' +
+      ids.map(encodeURIComponent).join(',') + '&key=' + key;
+    const resp = await fetch(url);
+    if (!resp.ok) return out;
+    const data: any = await resp.json();
+    (data.items || []).forEach((item: any) => {
+      if (item.id && item.snippet && item.snippet.title) out[item.id] = item.snippet.title;
+    });
+  } catch (err) {
+    console.error(err);
+  }
+  return out;
 }
 
 const admin = {
@@ -133,6 +155,64 @@ const admin = {
       console.error(err);
     }
     res.redirect('/admin/submissions');
+  },
+
+  // ── Engagement stats (see models/analyticsevent.ts) ─────────────────────────
+
+  async getStats(req: Request, res: Response): Promise<void> {
+    try {
+      // One doc per session: whether it ever loaded '/' (page_view), how many
+      // videos it played, and the last video it played (a proxy for "the
+      // video the session ended on" — there's no real signal for tab-close).
+      const perSession: any[] = await AnalyticsEvent.aggregate([
+        { $sort: { time: 1 } },
+        {
+          $group: {
+            _id: '$sessionID',
+            hasPageView: { $max: { $cond: [{ $eq: ['$type', 'page_view'] }, 1, 0] } },
+            videoIDs: { $push: { $cond: [{ $eq: ['$type', 'video_played'] }, '$videoID', '$$REMOVE'] } }
+          }
+        },
+        {
+          $project: {
+            hasPageView: 1,
+            videoCount: { $size: '$videoIDs' },
+            lastVideoID: { $arrayElemAt: ['$videoIDs', -1] }
+          }
+        }
+      ]);
+
+      const landedSessions = perSession.filter((s) => s.hasPageView === 1);
+      const bouncedCount = landedSessions.filter((s) => s.videoCount === 0).length;
+      const withVideo = perSession.filter((s) => s.videoCount > 0);
+      const totalVideosWatched = withVideo.reduce((sum, s) => sum + s.videoCount, 0);
+      const avgVideosWatched = withVideo.length ? totalVideosWatched / withVideo.length : 0;
+
+      const endingCounts = new Map<string, number>();
+      withVideo.forEach((s) => {
+        if (!s.lastVideoID) return;
+        endingCounts.set(s.lastVideoID, (endingCounts.get(s.lastVideoID) || 0) + 1);
+      });
+      const topEndingVideos = Array.from(endingCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 15)
+        .map(([videoID, count]) => ({ videoID, count }));
+
+      const titles = await lookupTitles(topEndingVideos.map((v) => v.videoID));
+
+      res.render('admin/stats', {
+        user: req.user,
+        landedCount: landedSessions.length,
+        bouncedCount,
+        bounceRate: landedSessions.length ? (bouncedCount / landedSessions.length * 100) : 0,
+        watchedSessionCount: withVideo.length,
+        avgVideosWatched,
+        topEndingVideos: topEndingVideos.map((v) => ({ ...v, title: titles[v.videoID] || null }))
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).send('Error loading stats');
+    }
   }
 };
 
