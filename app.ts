@@ -71,7 +71,23 @@ app.use(passport.session());
 // whenever a deploy changes a file's contents. That makes a very long,
 // immutable cache safe for both browsers and Cloudflare's edge — no risk of
 // serving a stale asset after a deploy.
-const staticOptions = { maxAge: '1y', immutable: true };
+//
+// A handful of files in public/ are requested directly by URL and are never
+// run through assetUrl() (crawlers and social-share scrapers expect these at
+// fixed, well-known paths), so their URL never changes when their content
+// does. Give those a short, explicit TTL instead of inheriting the 1-year
+// default, so an update to any of them shows up promptly instead of being
+// held stale at the edge/browser for up to a year.
+const SHORT_CACHE_FILES = new Set(['robots.txt', 'sitemap.xml', 'BingSiteAuth.xml', 'favicon.svg', 'og-image.png']);
+const staticOptions = {
+  maxAge: '1y',
+  immutable: true,
+  setHeaders: (res: express.Response, filePath: string) => {
+    if (SHORT_CACHE_FILES.has(path.basename(filePath))) {
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+    }
+  }
+};
 app.use(express.static(path.join(__dirname, 'public'), staticOptions));
 app.use(express.static(path.join(__dirname, 'dist'), staticOptions));
 
