@@ -4,6 +4,7 @@ import VideoHistory = require('../models/videohistory');
 import BannedVideo = require('../models/bannedvideo');
 import AnalyticsEvent = require('../models/analyticsevent');
 import { extractVideoId } from '../lib/youtube';
+import { shouldTrack } from '../lib/analyticsGate';
 import type { Request, Response } from 'express';
 
 type Callback<T = unknown> = (err: unknown, result?: T) => void;
@@ -102,8 +103,10 @@ const api = {
           userAgent: (req.headers && req.headers['user-agent']) || ''
         }).catch((e: unknown) => { console.log(e); });
       }
-      AnalyticsEvent.create({ sessionID: req.sessionID, type: 'video_played', videoID: doc.videoID })
-        .catch((e: unknown) => { console.log(e); });
+      if (shouldTrack(req)) {
+        AnalyticsEvent.create({ sessionID: req.sessionID, type: 'video_played', videoID: doc.videoID })
+          .catch((e: unknown) => { console.log(e); });
+      }
       res.json({ vidID: doc.videoID });
     });
   },
@@ -114,7 +117,7 @@ const api = {
   // avg-videos-watched / session-ending-video stats.
   trackVideoPlay(req: Request, res: Response): void {
     const vidID = extractVideoId(req.params.videoID);
-    if (vidID) {
+    if (vidID && shouldTrack(req)) {
       AnalyticsEvent.create({ sessionID: req.sessionID, type: 'video_played', videoID: vidID })
         .catch((e: unknown) => { console.log(e); });
     }

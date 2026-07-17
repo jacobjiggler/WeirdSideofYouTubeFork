@@ -1,6 +1,7 @@
 import passport from 'passport';
 import api = require('./api');
 import AnalyticsEvent = require('../models/analyticsevent');
+import { shouldTrack } from '../lib/analyticsGate';
 import type { Request, Response } from 'express';
 
 const root = {
@@ -8,7 +9,9 @@ const root = {
     // Fire-and-forget: a page_view marks this session as having landed, so it
     // can be compared against video_played events to measure how many
     // visitors never click "Get Weird".
-    AnalyticsEvent.create({ sessionID: req.sessionID, type: 'page_view' }).catch((e: unknown) => { console.log(e); });
+    if (shouldTrack(req)) {
+      AnalyticsEvent.create({ sessionID: req.sessionID, type: 'page_view' }).catch((e: unknown) => { console.log(e); });
+    }
 
     if (!req.session.seenVideos) req.session.seenVideos = [];
     api.randomVideoID(req.session.seenVideos, (err: any, doc: any) => {

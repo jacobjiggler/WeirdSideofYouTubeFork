@@ -6,7 +6,7 @@ var AnalyticsEvent = require('../models/analyticsevent');
 var root = require('../controllers/root');
 
 function makeReq(overrides) {
-  return Object.assign({ session: {}, user: null, sessionID: 'sess-1' }, overrides);
+  return Object.assign({ session: {}, user: null, sessionID: 'sess-1', query: {} }, overrides);
 }
 
 function makeRes() {
